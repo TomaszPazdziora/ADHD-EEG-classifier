@@ -26,11 +26,11 @@ import os
 
 # NUM_OF_TASKS - 11
 # NUM_OF_PATIENTS - 13
-# NUM_OF_ELECTRODES - 2
+# NUM_OF_CHANNELS - 2
 
 CONST_IDX = 0  # const value used in database data loading
 TASK_DURATION = [30, 20, 20, 45, 15, 30, 30, 30, 30, 30, 45]  # in seconds
-_TASK_ELECTRODES = {
+_TASK_CHANNELS = {
     0: ["Cz", "F4"],
     1: ["Cz", "F4"],
     2: ["Cz", "F4"],
@@ -49,20 +49,27 @@ def get_task_frequency(num_of_samples: int, task_idx: int) -> float:
     return num_of_samples / TASK_DURATION[task_idx]
 
 
-def get_electrode_name(task_idx: int, electrode_idx: int) -> str:
-    return _TASK_ELECTRODES[task_idx][electrode_idx]
+def get_channel_name(task_idx: int, channel_idx: int) -> str:
+    return _TASK_CHANNELS[task_idx][channel_idx]
 
 
 class Signal:
-    def __init__(self, samples: list, db_name: str, task_idx: int, patient_idx: int, electrode_idx: int):
-        self.samples = samples
-        self.num_of_samples = len(samples)
+    def __init__(self, ch1_data: list, ch2_data: list, db_name: str, task_idx: int, patient_idx: int):
+        self.ch1_data = ch1_data
+        self.ch2_data = ch2_data
+        if len(ch1_data) != len(ch2_data):
+            raise RuntimeError(
+                "Both signals should have the same length!"
+            )
+        self.num_of_samples = len(ch1_data)
         self.db_name = db_name
         self.task_idx = task_idx
         self.patient_idx = patient_idx
-        self.electrode_idx = electrode_idx
-        self.electode_type = get_electrode_name(
-            task_idx=task_idx, electrode_idx=electrode_idx
+        self.ch1_type = get_channel_name(
+            task_idx=task_idx, channel_idx=0
+        )
+        self.ch2_type = get_channel_name(
+            task_idx=task_idx, channel_idx=1
         )
         self.frequency = get_task_frequency(
             num_of_samples=self.num_of_samples, task_idx=task_idx
@@ -76,9 +83,9 @@ class ElectrodeData:
 
 
 class Patient:
-    def __init__(self, electrodes: list[ElectrodeData]):
-        self.electrodes = electrodes
-        self.num_of_electrodes = len(self.electrodes)
+    def __init__(self, channels: list[ElectrodeData]):
+        self.channels = channels
+        self.num_of_channels = len(self.channels)
 
 
 class Task:
@@ -96,31 +103,31 @@ class DataLoader:
         self.signal = mat[db_name][CONST_IDX]
         self.tasks = self._load_all_tasks()
 
-    def get_single_signal(self, task_idx, patient_idx, electrode_idx) -> list[float]:
+    def get_signal(self, task_idx, patient_idx) -> list[float]:
         return Signal(
-            self.tasks[task_idx].patients[patient_idx].electrodes[electrode_idx].data,
+            ch1_data=self.tasks[task_idx].patients[patient_idx].channels[0].data,
+            ch2_data=self.tasks[task_idx].patients[patient_idx].channels[1].data,
             db_name=self.db_name,
             task_idx=task_idx,
-            patient_idx=patient_idx,
-            electrode_idx=electrode_idx
+            patient_idx=patient_idx
         )
 
-    def get_number_of_samples(self, task_idx, patient_idx, electrode_idx) -> int:
-        return self.tasks[task_idx].patients[patient_idx].electrodes[electrode_idx].num_of_samples
+    def get_number_of_samples(self, task_idx, patient_idx, channel_idx) -> int:
+        return self.tasks[task_idx].patients[patient_idx].channels[channel_idx].num_of_samples
 
-    def _load_single_electorode_data(self, task_idx: int, patient_idx: int, electrode_idx: int) -> list:
-        samples = [sample[electrode_idx]
+    def _load_single_electorode_data(self, task_idx: int, patient_idx: int, channel_idx: int) -> list:
+        samples = [sample[channel_idx]
                    for sample in self.signal[task_idx][patient_idx]]
         return ElectrodeData(data=samples)
 
-    def _load_all_electrode_data(self, task_idx: int, patient_idx: int) -> list:
+    def _load_all_channel_data(self, task_idx: int, patient_idx: int) -> list:
         return [
             self._load_single_electorode_data(task_idx, patient_idx, 0),
             self._load_single_electorode_data(task_idx, patient_idx, 1)
         ]
 
     def _load_all_patients(self, task_idx: int) -> list:
-        patient = [Patient(self._load_all_electrode_data(
+        patient = [Patient(self._load_all_channel_data(
             task_idx, task)) for task in range(len(self.signal[task_idx]))]
         return patient
 
@@ -134,6 +141,6 @@ if __name__ == "__main__":
     # examle data loading
     data = DataLoader('FC')
     print(
-        f"Reading one singal sample: {data.tasks[0].patients[0].electrodes[0].data[0]}")
-    print(data.get_single_signal(task_idx=0, patient_idx=0, electrode_idx=0))
-    print(data.get_number_of_samples(task_idx=0, patient_idx=0, electrode_idx=0))
+        f"Reading one singal sample: {data.tasks[0].patients[0].channels[0].data[0]}")
+    print(data.get_signal(task_idx=0, patient_idx=0))
+    print(data.get_number_of_samples(task_idx=0, patient_idx=0, channel_idx=0))
