@@ -1,0 +1,11 @@
+FADHD, Number of patients: 11
+FC, Number of patients: 13
+MADHD, Number of patients: 27
+MC, Number of patients: 29
+----------------------------------
+Number of patients with ADHD: 38
+Number of patients in control group: 42
+All patients number 80 - 1
+EEG signal of subject number 7 of the group of women with ADHD is corrupted
+----------------------------------
+Number of signals = patients * tasks * channels (electrodes) = 79 * 11 * 2 = 1738
