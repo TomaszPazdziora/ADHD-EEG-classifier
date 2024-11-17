@@ -19,17 +19,17 @@ import os
 # cell 5: Pre-Omni harmonic baseline, channels: Cz, F4, duration: 15s
 # cell 6: Omni harmonic assessment, channels: Cz, F4, duration: 30s
 # cell 7: Eyes open baseline, channels: O1,F4, duration: 30s
-# cell 8: Eyes closed, channels: O1,F4, duration: 30s
-# cell 9: Eyes open, channels: O1,F4, duration: 30s
+# cell 8: Eyes closed, channels: O1,F4, duration: 30s / 20s
+# cell 9: Eyes open, channels: O1,F4, duration: 30s / 20s
 # cell 10: Eyes closed, channels: F3, F4, duration: 45s
 # cell 11: Eyes closed, channels: Fz, F4, duration: 45s
 
 # NUM_OF_TASKS - 11
-# NUM_OF_PATIENTS - 13
+# NUM_OF_PATIENTS - (?)
 # NUM_OF_CHANNELS - 2
 
 CONST_IDX = 0  # const value used in database data loading
-TASK_DURATION = [30, 20, 20, 45, 15, 30, 30, 30, 30, 30, 45]  # in seconds
+TASK_DURATION = [30, 20, 20, 45, 15, 30, 30, 20, 20, 45, 45]  # in seconds
 _TASK_CHANNELS = {
     0: ["Cz", "F4"],
     1: ["Cz", "F4"],
@@ -74,6 +74,9 @@ class Signal:
         self.frequency = get_task_frequency(
             num_of_samples=self.num_of_samples, task_idx=task_idx
         )
+
+    def __str__(self):
+        return f"{self.db_name}, task: {self.task_idx}, patient: {self.patient_idx}, num of samples: {self.num_of_samples}, task duration: {TASK_DURATION[self.task_idx]}, freq: {self.frequency}"
 
 
 class ElectrodeData:
@@ -143,4 +146,3 @@ if __name__ == "__main__":
     print(
         f"Reading one singal sample: {data.tasks[0].patients[0].channels[0].data[0]}")
     print(data.get_signal(task_idx=0, patient_idx=0))
-    print(data.get_number_of_samples(task_idx=0, patient_idx=0, channel_idx=0))
