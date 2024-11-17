@@ -19,8 +19,8 @@ import os
 # cell 5: Pre-Omni harmonic baseline, channels: Cz, F4, duration: 15s
 # cell 6: Omni harmonic assessment, channels: Cz, F4, duration: 30s
 # cell 7: Eyes open baseline, channels: O1,F4, duration: 30s
-# cell 8: Eyes closed, channels: O1,F4, duration: 30s
-# cell 9: Eyes open, channels: O1,F4, duration: 30s
+# cell 8: Eyes closed, channels: O1,F4, duration: 30s / 20s
+# cell 9: Eyes open, channels: O1,F4, duration: 30s / 20s
 # cell 10: Eyes closed, channels: F3, F4, duration: 45s
 # cell 11: Eyes closed, channels: Fz, F4, duration: 45s
 
@@ -29,7 +29,7 @@ import os
 # NUM_OF_CHANNELS - 2
 
 CONST_IDX = 0  # const value used in database data loading
-TASK_DURATION = [30, 20, 20, 45, 15, 30, 30, 30, 30, 45, 45]  # in seconds
+TASK_DURATION = [30, 20, 20, 45, 15, 30, 30, 20, 20, 45, 45]  # in seconds
 _TASK_CHANNELS = {
     0: ["Cz", "F4"],
     1: ["Cz", "F4"],
