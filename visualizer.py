@@ -2,10 +2,8 @@ from sklearn import preprocessing
 import matplotlib.pyplot as plt
 from scipy import fft
 import numpy as np
-from data_loader import DataLoader, Signal
+from data_loader import DataLoader, Signal, DB_NAMES
 import os
-
-DB_NAMES = ["FADHD", "FC", "MADHD", "MC"]
 
 
 def plot_sig_in_time(sig: Signal, save_to_file=False):
@@ -139,7 +137,7 @@ def generate_raport():
     raport_content += f"EEG signal of subject number 7 of the group of women with ADHD is \
 corrupted\n"
     raport_content += f"----------------------------------\nNumber of signals = patients *\
- tasks * channels (electrodes) = {all_patients - 1} * 11 * 2 = {(all_patients-1)*11*2}"
+tasks * channels (electrodes) = {all_patients - 1} * 11 * 2 = {(all_patients-1)*11*2}"
 
     if os.path.exists(file_path):
         os.remove(file_path)
