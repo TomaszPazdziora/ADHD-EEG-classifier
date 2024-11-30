@@ -30,6 +30,7 @@ import os
 
 CONST_IDX = 0  # const value used in database data loading
 TASK_DURATION = [30, 20, 20, 45, 15, 30, 30, 20, 20, 45, 45]  # in seconds
+DB_NAMES = ["FADHD", "FC", "MADHD", "MC"]
 _TASK_CHANNELS = {
     0: ["Cz", "F4"],
     1: ["Cz", "F4"],
