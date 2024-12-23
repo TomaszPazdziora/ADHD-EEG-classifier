@@ -1,6 +1,4 @@
-from sklearn import preprocessing
 import matplotlib.pyplot as plt
-from scipy import fft
 import numpy as np
 from data_loader import DataLoader, Signal, DB_NAMES
 import os
@@ -147,11 +145,12 @@ tasks * channels (electrodes) = {all_patients - 1} * 11 * 2 = {(all_patients-1)*
 
 
 if __name__ == "__main__":
-    save_all_plots()
-    generate_raport()
+    # save_all_plots()
+    # generate_raport()
 
     # plot single signal
-    # sig = fc.get_signal(task_idx=7, patient_idx=12)
-    # plot_fft(sig=sig, save_to_file=True)
-    # plt.clf()
-    # plot_sig_in_time(sig=sig, save_to_file=True)
+    fc = DataLoader(DB_NAMES[0])
+    sig = fc.get_signal(task_idx=2, patient_idx=4)
+    plot_fft(sig=sig, save_to_file=True)
+    plt.clf()
+    plot_sig_in_time(sig=sig)

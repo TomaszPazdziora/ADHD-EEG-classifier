@@ -10,12 +10,25 @@ import time
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, classification_report
+from sklearn.tree import DecisionTreeClassifier, plot_tree
+from sklearn.decomposition import PCA
 from logger_config import setup_logger
+from sklearn.manifold import TSNE
+from sklearn.metrics import ConfusionMatrixDisplay
+import copy
+import random
 
 
 _logger = setup_logger(__name__)
 SEP_NUM = 60
 BRAIN_WAVES = ["delta", "theta", "alfa", "beta", "gamma"]
+STATISTICAL_FEATURES = ["mean", "median", "variance", "std_dev", "skew", "kurtosis"]
+
+feature_names = []
+for wave in BRAIN_WAVES:
+    for feature in STATISTICAL_FEATURES:
+        feature_names.append(wave + " - " + feature)
+
 adhd_label = [0]
 control_label = [1]
 
@@ -28,11 +41,12 @@ def get_statistical_features(dwt_sig: list) -> list:
     """
     dwt_mean = np.mean(dwt_sig)
     dwt_median = np.median(dwt_sig)
-    dwt_variance = np.var(dwt_sig)    
+    dwt_variance = np.var(dwt_sig)  
     dwt_std_dev = np.std(dwt_sig)
-    dwt_skew = skew(dwt_sig)
-    dwt_kurtosis = kurtosis(dwt_sig)
-    return [dwt_mean, dwt_median, dwt_variance, dwt_std_dev, dwt_skew, dwt_kurtosis]
+    # dwt_skew = skew(dwt_sig)
+    # dwt_kurtosis = kurtosis(dwt_sig)
+    return [dwt_mean, dwt_median, dwt_variance , dwt_std_dev] #, dwt_skew, dwt_kurtosis]
+
 
 
 def get_all_waves_statistical_features(waves: dict) -> list:
@@ -94,6 +108,15 @@ def plot_waves(waves: dict) -> None:
 
     plt.show()
 
+def count_accurancy(labels, predict):
+    assert len(labels) == len(predict)  
+
+    match_cnt = 0
+    for i in range(len(labels)):
+        if labels[i] == predict[i]:
+            match_cnt += 1
+    return match_cnt / len(labels)
+
 
 if __name__ == "__main__":
     start_time = time.time()
@@ -140,7 +163,9 @@ if __name__ == "__main__":
     _logger.info("=" * SEP_NUM)
     start_time = time.time()
 
+    # ====================================================================
     # feature extraction
+
     _logger.info("Feature extraction...")
 
     adhd_features = get_features_for_model(adhd_signals)
@@ -151,32 +176,122 @@ if __name__ == "__main__":
     control_features_len = len(control_features)
     _logger.info(f"control size: {control_features_len}")
 
-    all_features = adhd_features
-    all_features.extend(control_features)
-    _logger.info(f"all features size {len(all_features)}")
-
     _logger.info(f"Features extracted in: {time.time() - start_time} s")
     _logger.info("=" * SEP_NUM)
 
+    # ====================================================================
+    # splitting into classes
+
+    SPLIT_PERCENTAGE = 0.8
+    random.shuffle(adhd_features)
+    random.shuffle(control_features)
+
     # split to test and train groups 
-    labels = adhd_label * adhd_features_len + control_label * control_features_len
-    X_train, X_test, y_train, y_test = train_test_split(all_features, labels, test_size=0.3)
+    adhd_len = int(adhd_features_len * SPLIT_PERCENTAGE)
+    _logger.info(f"ADHD train set len: {adhd_len}")
+    _logger.info(f"All ADHD features len: {adhd_features_len}")
+    _logger.info("-" * SEP_NUM)
+
+    control_len = int(control_features_len * SPLIT_PERCENTAGE)
+    _logger.info(f"Control train set len: {control_len}")
+    _logger.info(f"All control features len: {control_features_len}")
+    _logger.info("-" * SEP_NUM)
+
+    train_set = adhd_features[:adhd_len]
+    train_set.extend(control_features[:control_len])
+    _logger.info(f"Train set len: {len(train_set)}")
+    _logger.info("-" * SEP_NUM)
+
+    labels = adhd_label * adhd_len + control_label * control_len
+    str_labels = "adhd" * adhd_len + "control" * control_len
+
 
     start_time = time.time()
-    _logger.info(f"Training set size: {len(X_train)}")
-    _logger.info(f"Testing set size: {len(X_test)}")  
+    # ====================================================================
+    # Model selection and training
 
-    clf = RandomForestClassifier()
+    # clf = RandomForestClassifier()
+    clf = DecisionTreeClassifier(max_depth=5)    
 
     # Model training
     _logger.info("=" * SEP_NUM)
     _logger.info("Training model...")
 
-    clf.fit(X_train, y_train)
+    # clf.fit(X_train, y_train)
+    clf.fit(train_set, labels)
 
     _logger.info(f"Model trained in: {time.time() - start_time}")
     _logger.info("=" * SEP_NUM)
 
-    # Test group predict
-    y_pred = clf.predict(X_test)
-    _logger.info(f"Accuracy: {accuracy_score(y_test, y_pred)}")
+    # Predictions
+    adhd_test_group = adhd_features[adhd_len:]
+    adhd_test_group_labels = (adhd_features_len - adhd_len) * adhd_label
+
+    control_test_group = control_features[control_len:]
+    control_test_group_labels = (control_features_len - control_len) * control_label
+
+    adhd_predict = clf.predict(adhd_test_group)
+    _logger.info(f"ADHD classification accuracy: {count_accurancy(adhd_test_group_labels, adhd_predict)}")
+
+    control_predict = clf.predict(control_test_group)
+    _logger.info(f"Control group classification accuracy: {count_accurancy(control_test_group_labels, control_predict)}")
+
+    # plt.figure(figsize=(24, 16))
+    # plot_tree(clf, filled=True, feature_names=feature_names, class_names=["ADHD", "Control"])
+    # plt.title("Decision Tree")
+    # plt.show()
+
+    # pca = PCA(n_components=2)
+    # reduced_data = pca.fit_transform(train_set)
+
+    tsne = TSNE(n_components=2, perplexity=30, learning_rate=200, max_iter=1000)
+    reduced_data = tsne.fit_transform(np.array(train_set))    
+
+    plt.figure(figsize=(12, 8))
+    scatter = plt.scatter(reduced_data[:, 0], reduced_data[:, 1], c=labels, cmap='viridis')
+    plt.legend(*scatter.legend_elements(), title="Klasy")
+    plt.title('t-SNE - Wizualizacja cech')
+    plt.xlabel('Pierwszy komponent główny')
+    plt.ylabel('Drugi komponent główny')
+    plt.grid(True)  
+
+    disp = ConfusionMatrixDisplay.from_estimator(
+        clf,
+        train_set,
+        labels,
+        display_labels=["adhd","control"],
+        cmap=plt.cm.Blues,
+        normalize=None,
+    )
+
+    plt.title("Macierz pomyłek")
+    plt.show()
+
+    # averages = [sum(column) / len(column) for column in zip(*adhd_features)]
+
+    # # stat_features = ["mean", "median", "variance", "std_dev", "skew", "kurtois"]
+    # stat_features = ["mean", "median", "variance", "std_dev"]
+
+    # i = 0
+    # pr_adhd = []
+    # for b in BRAIN_WAVES:
+    #     for s in stat_features:
+    #         pr_adhd.append(f"ADHD   - Wave: {b}, Feature: {s}, average: {averages[i]}")
+    #         i += 1
+
+
+    # averages = [sum(column) / len(column) for column in zip(*control_features)]
+
+    # i = 0
+    # pr_control = []
+
+    # for b in BRAIN_WAVES:
+    #     for s in stat_features:
+    #         pr_control.append(f"CONTROL - Wave: {b}, Feature: {s}, average: {averages[i]}")
+    #         i += 1
+
+
+    # for i in range(len(pr_control)):
+    #     print(pr_adhd[i])
+    #     print(pr_control[i])
+    #     print('-' * 60)
