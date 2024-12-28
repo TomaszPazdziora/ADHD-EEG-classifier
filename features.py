@@ -15,14 +15,14 @@ from sklearn.decomposition import PCA
 from logger_config import setup_logger
 from sklearn.manifold import TSNE
 from sklearn.metrics import ConfusionMatrixDisplay
-import copy
+import pandas as pd 
 import random
 
 
 _logger = setup_logger(__name__)
 SEP_NUM = 60
 BRAIN_WAVES = ["delta", "theta", "alfa", "beta", "gamma"]
-STATISTICAL_FEATURES = ["mean", "median", "variance", "std_dev", "skew", "kurtosis"]
+STATISTICAL_FEATURES = ["mean", "median", "variance", "std_dev"] #, "skew", "kurtosis"]
 
 feature_names = []
 for wave in BRAIN_WAVES:
@@ -83,6 +83,74 @@ def get_features_for_model(signal_list: list) -> list:
         features.append(get_all_waves_statistical_features(waves))
     return features
 
+def save_features_to_csv(features: list, filename: str) -> None:
+    data = {"feature names": feature_names}
+    i = 0
+    for single_signal_features in features:
+        data[str(i)] =  single_signal_features
+        i += 1
+    df = pd.DataFrame(data)
+    df.to_csv(filename+".csv", index=False)
+
+def closest_index(arr, value):
+    return min(range(len(arr)), key=lambda i: abs(arr[i] - value))
+
+def _get_feat_dict_for_hist(features: list) -> dict:
+    num_of_patients = len(features) 
+    # number of features for each patient - single electrode counted for single raw signal
+    num_of_features = len(features[0])
+
+    feature_dict = {}
+    for i in range(num_of_features):
+        feature_buff = []
+        for j in range(num_of_patients):
+            feature_buff.append(features[j][i])
+
+        wave_name_idx = int(i / len(STATISTICAL_FEATURES)) 
+        feature_name_idx = i % len(STATISTICAL_FEATURES)
+        full_feature_name = BRAIN_WAVES[wave_name_idx] + '_' + STATISTICAL_FEATURES[feature_name_idx]
+        feature_dict[full_feature_name] = feature_buff
+    return feature_dict
+
+def filter_outliers(data, threshold=2):
+    mean = np.mean(data)
+    std_dev = np.std(data)
+    return [x for x in data if abs(x - mean) <= threshold * std_dev]
+
+def save_features_hist(adhd_features: list, control_features: list) -> None:
+    adhd_feat_dict = _get_feat_dict_for_hist(adhd_features)
+    control_feat_dict = _get_feat_dict_for_hist(control_features)
+
+    for (adhd_key, adhd_value), (control_key, control_value) in zip(adhd_feat_dict.items(), control_feat_dict.items()):
+        # feat_min = min(min(adhd_value), min(control_value))
+        # feat_max = max(max(adhd_value), max(control_value))
+
+        # samples = np.linspace(feat_min, feat_max, num=10)
+        # hist_adhd_values = []
+        # hist_control_values = []
+        
+        # for f in adhd_value:
+        #     hist_adhd_values.append(samples[closest_index(samples, f)])
+
+        # for f in control_value:
+        #     hist_control_values.append(samples[closest_index(samples, f)])
+        adhd_feat_cnt = len(adhd_value)
+        adhd_value = filter_outliers(adhd_value)
+        after_filter_cnt = len(adhd_value)
+        _logger.info(f"Filtered {adhd_feat_cnt - after_filter_cnt} adhd values. Feature set: {adhd_key}")
+
+        plt.hist(adhd_value, histtype='stepfilled', alpha=0.3, bins=25, edgecolor='black', label='adhd')
+        plt.hist(control_value, histtype='stepfilled', alpha=0.3, bins=25, edgecolor='black', label='control')
+        plt.title('Histogram ' + adhd_key)
+        plt.xlabel('Values')
+        plt.ylabel('Number of occurences')
+        save_dir = 'data' + os.sep + "features_histograms"
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+        plt.legend()
+        plt.savefig(save_dir + os.sep + adhd_key)
+        plt.clf()
+
 
 def plot_waves(waves: dict) -> None:
     delta = plt.subplot(3,2,1)
@@ -121,7 +189,7 @@ def count_accurancy(labels, predict):
 if __name__ == "__main__":
     start_time = time.time()
     # TASK_SET = [1, 2, 7, 8]
-    TASK_SET = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    TASK_SET = [0, 1, 2, 3, 4, 5, 7, 8, 9, 10]
 
     # definition of structures for iterating through them
     WOMEN_ADHD_DICT = {"db": DataLoader(DB_NAMES[0]), "number_of_patients": 11}
@@ -169,12 +237,16 @@ if __name__ == "__main__":
     _logger.info("Feature extraction...")
 
     adhd_features = get_features_for_model(adhd_signals)
+    # save_features_to_csv(adhd_features, "adhd_features")
     adhd_features_len = len(adhd_features)
     _logger.info(f"ahdh size: {adhd_features_len}")
 
     control_features = get_features_for_model(control_signals)
+    # save_features_to_csv(control_features, "control_features")
     control_features_len = len(control_features)
     _logger.info(f"control size: {control_features_len}")
+
+    save_features_hist(adhd_features=adhd_features, control_features=control_features)
 
     _logger.info(f"Features extracted in: {time.time() - start_time} s")
     _logger.info("=" * SEP_NUM)
