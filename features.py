@@ -10,6 +10,7 @@ import time
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, classification_report
+from sklearn.model_selection import cross_val_score
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.tree import DecisionTreeClassifier, plot_tree
 from sklearn.neural_network import MLPClassifier
@@ -289,12 +290,17 @@ if __name__ == "__main__":
     control_test_group = control_features[control_len:]
     control_test_group_labels = (control_features_len - control_len) * control_label
 
+    cross_val_set = adhd_features
+    cross_val_set.extend(control_features)
+    cross_val_labels = adhd_label * adhd_features_len + control_label * control_features_len
+
     # ====================================================================
     # Model selection and training
     start_time = time.time()
 
     if args.method == "cnn":
         clf = MLPClassifier(hidden_layer_sizes=(100,), max_iter=1000, random_state=42)
+        cross_clf = MLPClassifier(hidden_layer_sizes=(100,), max_iter=1000, random_state=42)
 
         # cut longer signals to shortest one - equal samples number is required for CNN
         for i in range(len(train_set)):
@@ -309,19 +315,28 @@ if __name__ == "__main__":
         for i in range(len(test_set)):
             test_set[i] = test_set[i][:3800]
 
+        for i in range(len(cross_val_set)):
+            cross_val_set[i] = cross_val_set[i][:3800]
+
     else:
         if args.method == "forest":
             clf = RandomForestClassifier()
+            cross_clf = RandomForestClassifier()
 
         elif args.method == "tree":
             clf = DecisionTreeClassifier(max_depth=5)    
-        
+            corss_clf = DecisionTreeClassifier(max_depth=5)
+
         elif args.method == "knn":
             clf = KNeighborsClassifier(n_neighbors=6)
+            cross_clf = KNeighborsClassifier(n_neighbors=6)
     
     # Model training
     _logger.info("=" * SEP_NUM)
     _logger.info("Training model...")
+
+    scores = cross_val_score(cross_clf, cross_val_set, cross_val_labels, cv=10)
+    print("Cross-validation scores:", scores)
 
     clf.fit(train_set, labels)
 
@@ -334,6 +349,8 @@ if __name__ == "__main__":
 
     control_predict = clf.predict(control_test_group)
     _logger.info(f"Control group classification accuracy: {count_accurancy(control_test_group_labels, control_predict)}")
+
+
 
     # plt.figure(figsize=(24, 16))
     # plot_tree(clf, filled=True, feature_names=feature_names, class_names=["ADHD", "Control"])
