@@ -325,7 +325,7 @@ if __name__ == "__main__":
 
         elif args.method == "tree":
             clf = DecisionTreeClassifier(max_depth=5)    
-            corss_clf = DecisionTreeClassifier(max_depth=5)
+            cross_clf = DecisionTreeClassifier(max_depth=5)
 
         elif args.method == "knn":
             clf = KNeighborsClassifier(n_neighbors=6)
