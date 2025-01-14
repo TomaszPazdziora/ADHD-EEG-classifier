@@ -5,3 +5,4 @@ plots/
 logs/
 test/
 data/features_histograms
+doc/*.png

@@ -7,16 +7,16 @@ from scipy.stats import norm, kurtosis, skew
 import os
 from pywt import wavedec
 import time
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import  cross_val_score, train_test_split, cross_val_predict, StratifiedKFold
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score, classification_report
-from sklearn.model_selection import cross_val_score
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.tree import DecisionTreeClassifier, plot_tree
 from sklearn.neural_network import MLPClassifier
 from sklearn.decomposition import PCA
 from logger_config import setup_logger
 from sklearn.manifold import TSNE
+import seaborn as sns
 from sklearn.metrics import ConfusionMatrixDisplay
 from sklearn.tree import export_text
 import pandas as pd 
@@ -27,7 +27,7 @@ import argparse
 _logger = setup_logger(__name__)
 SEP_NUM = 60
 BRAIN_WAVES = ["delta", "theta", "alfa", "beta", "gamma"]
-STATISTICAL_FEATURES = ["mean", "median", "variance", "std_dev"] #, "skew", "kurtosis"]
+STATISTICAL_FEATURES = ["mean", "median", "variance", "std_dev", "skew", "kurtosis"]
 
 feature_names = []
 for wave in BRAIN_WAVES:
@@ -42,9 +42,13 @@ def load_signal_from_dict(signal_dict: dict) -> list:
     signals = []
     for key, value in signal_dict.items():
         for p in range(value["number_of_patients"]):
-            for t in TASK_SET:
-                signals.append(value["db"].get_signal(task_idx=t, patient_idx=p).ch1_data)
-                signals.append(value["db"].get_signal(task_idx=t, patient_idx=p).ch2_data)
+            # ADHD woman - patient idx = 6 - 2 chanel signals are corrupted 
+            if key == 'ADHD_WOMEN' and p == 6:
+                continue
+            else:
+                for t in TASK_SET:
+                    # signals.append(value["db"].get_signal(task_idx=t, patient_idx=p).ch1_data)
+                    signals.append(value["db"].get_signal(task_idx=t, patient_idx=p).ch2_data)
     return signals
 
 
@@ -58,10 +62,9 @@ def get_statistical_features(dwt_sig: list) -> list:
     dwt_median = np.median(dwt_sig)
     dwt_variance = np.var(dwt_sig)  
     dwt_std_dev = np.std(dwt_sig)
-    # dwt_skew = skew(dwt_sig)
-    # dwt_kurtosis = kurtosis(dwt_sig)
-    return [dwt_mean, dwt_median, dwt_variance , dwt_std_dev] #, dwt_skew, dwt_kurtosis]
-
+    dwt_skew = skew(dwt_sig)
+    dwt_kurtosis = kurtosis(dwt_sig)
+    return [dwt_mean, dwt_median, dwt_variance , dwt_std_dev, dwt_skew, dwt_kurtosis]
 
 
 def get_all_waves_statistical_features(waves: dict) -> list:
@@ -131,7 +134,7 @@ def _get_feat_dict_for_hist(features: list) -> dict:
     return feature_dict
 
 
-def filter_outliers(data, threshold=2):
+def filter_outliers(data, threshold=3):
     mean = np.mean(data)
     std_dev = np.std(data)
     return [x for x in data if abs(x - mean) <= threshold * std_dev]
@@ -142,10 +145,11 @@ def save_features_hist(adhd_features: list, control_features: list) -> None:
     control_feat_dict = _get_feat_dict_for_hist(control_features)
 
     for (adhd_key, adhd_value), (control_key, control_value) in zip(adhd_feat_dict.items(), control_feat_dict.items()):
-        adhd_feat_cnt = len(adhd_value)
-        adhd_value = filter_outliers(adhd_value)
-        after_filter_cnt = len(adhd_value)
-        _logger.info(f"Filtered {adhd_feat_cnt - after_filter_cnt} adhd values. Feature set: {adhd_key}")
+        # adhd_feat_cnt = len(adhd_value)
+        # adhd_value = filter_outliers(adhd_value)
+        # control_value = filter_outliers(control_value)
+        # after_filter_cnt = len(adhd_value)
+        # _logger.info(f"Filtered {adhd_feat_cnt - after_filter_cnt} adhd values. Feature set: {adhd_key}")
 
         plt.hist(adhd_value, histtype='stepfilled', alpha=0.3, bins=25, edgecolor='black', label='adhd')
         plt.hist(control_value, histtype='stepfilled', alpha=0.3, bins=25, edgecolor='black', label='control')
@@ -197,11 +201,13 @@ def count_accurancy(labels, predict):
 
 if __name__ == "__main__":
     parser=argparse.ArgumentParser(description="Model training parser")
-    parser.add_argument("method")
+    parser.add_argument("--method", type=str, required=True, help="tree, forest, knn and nn are allowed")
+    parser.add_argument("--opt", action="store_true", help="Arg tell if script should optimize parameter for model - may took a lot of time")
+    parser.add_argument("--hist", action="store_true", help="Generate figures with features histograms. By default set to False.")
     args=parser.parse_args()
 
     start_time = time.time()
-    TASK_SET = [0, 1, 2, 3, 4, 5, 7, 8, 9, 10]
+    TASK_SET = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
     # definition of structures for iterating through them
     WOMEN_ADHD_DICT = {"db": DataLoader(DB_NAMES[0]), "number_of_patients": 11}
@@ -211,13 +217,13 @@ if __name__ == "__main__":
 
 
     ADHD_DB_DICT = {
-        "WOMEN": WOMEN_ADHD_DICT, 
-        "MEN": MEN_ADHD_DICT, 
+        "ADHD_WOMEN": WOMEN_ADHD_DICT, 
+        "ADHD_MEN": MEN_ADHD_DICT, 
     }
 
     CONTROL_DB_DICT = {
-        "WOMEN": WOMEN_CONTROL_DICT, 
-        "MEN": MEN_CONTROL_DICT,
+        "CONTROL_WOMEN": WOMEN_CONTROL_DICT, 
+        "CONTROL_MEN": MEN_CONTROL_DICT,
     }
 
     _logger.info("Loading signals...")
@@ -229,24 +235,19 @@ if __name__ == "__main__":
     _logger.info("=" * SEP_NUM)
 
     # ====================================================================
-    # load raw singals for cnn or extract features for different ML methods
+    # extract features for different ML methods
 
-    if args.method == "cnn":
-        adhd_features = adhd_signals
-        control_features = control_signals
+    start_time = time.time()
+    _logger.info("Feature extraction...")
+    _logger.info("Filtering outliers features (only for historam visualisation). Training is not affected")
 
-    if args.method == "tree" or args.method == "forest" or args.method == "knn":
-        start_time = time.time()
-        _logger.info("Feature extraction...")
-        _logger.info("Filtering outliers features (only for historam visualisation). Training is not affected")
-
-        adhd_features = get_features_for_model(adhd_signals)
-        control_features = get_features_for_model(control_signals)
+    adhd_features = get_features_for_model(adhd_signals)
+    control_features = get_features_for_model(control_signals)
+    if args.hist == True:
         save_features_hist(adhd_features=adhd_features, control_features=control_features)
 
-        _logger.info(f"Features extracted in: {time.time() - start_time} s")
-        _logger.info("=" * SEP_NUM)
-
+    _logger.info(f"Features extracted in: {time.time() - start_time} s")
+    _logger.info("=" * SEP_NUM)
 
     adhd_features_len = len(adhd_features)
     control_features_len = len(control_features)
@@ -254,131 +255,116 @@ if __name__ == "__main__":
     # ====================================================================
     # splitting into classes and groups
 
-    SPLIT_PERCENTAGE = 0.8
     random.shuffle(adhd_features)
     random.shuffle(control_features)
-
-    # split to test and train groups 
-    adhd_len = int(adhd_features_len * SPLIT_PERCENTAGE)
-    _logger.info(f"ADHD train set len: {adhd_len}")
-    _logger.info(f"ADHD test set len: {adhd_features_len - adhd_len}")
-    _logger.info(f"All ADHD features len: {adhd_features_len}")
-    _logger.info("-" * SEP_NUM)
-
-    control_len = int(control_features_len * SPLIT_PERCENTAGE)
-    _logger.info(f"Control train set len: {control_len}")
-    _logger.info(f"Control test set len: {control_features_len - control_len}")
-    _logger.info(f"All control features len: {control_features_len}")
-    _logger.info("-" * SEP_NUM)
-
-    train_set = adhd_features[:adhd_len]
-    train_set.extend(control_features[:control_len])
-    _logger.info(f"Train set len: {len(train_set)}")
-
-    test_set = adhd_features[adhd_len:]
-    test_set.extend(control_features[control_len:])
-    _logger.info(f"Test set len: {len(test_set)}")
-    _logger.info("-" * SEP_NUM)
-
-    labels = adhd_label * adhd_len + control_label * control_len
-    test_set_labels = adhd_label * (adhd_features_len - adhd_len) + control_label * (control_features_len - control_len)
-
-    # split test gorup to adhd and control patients
-    adhd_test_group = adhd_features[adhd_len:]
-    adhd_test_group_labels = (adhd_features_len - adhd_len) * adhd_label
-
-    control_test_group = control_features[control_len:]
-    control_test_group_labels = (control_features_len - control_len) * control_label
 
     cross_val_set = adhd_features
     cross_val_set.extend(control_features)
     cross_val_labels = adhd_label * adhd_features_len + control_label * control_features_len
 
+
+    _logger.info(f"ADHD test set len: {adhd_features_len}")
+    _logger.info(f"All ADHD features len: {adhd_features_len}")
+    _logger.info("-" * SEP_NUM)
+
+    _logger.info(f"Control test set len: {control_features_len}")
+    _logger.info(f"All control features len: {control_features_len}")
+    _logger.info("-" * SEP_NUM)
+
+    _logger.info(f"All signals len (adhd + control): {adhd_features_len + control_features_len}")
+    _logger.info("-" * SEP_NUM)
+    
+    
     # ====================================================================
     # Model selection and training
+    clf_list = []
+    param_list = []
+
+    if args.method == "nn":
+        if args.opt == True:
+            param_list = [i for i in range(1, 200, 5)]
+            for param in param_list:
+                clf_list.append(MLPClassifier(hidden_layer_sizes=(param,), max_iter=1000, random_state=42))
+        elif args.opt == False:
+            clf = MLPClassifier(hidden_layer_sizes=(85,), max_iter=1000, random_state=42)
+
+    elif args.method == "forest":
+        if args.opt == True:
+            param_list = [i for i in range(1, 100, 5)]
+            for param in param_list:
+                clf_list.append(RandomForestClassifier(n_estimators=param, random_state=42))
+        elif args.opt == False:
+            clf = RandomForestClassifier(n_estimators=80, random_state=42)
+
+    elif args.method == "tree":
+        if args.opt == True:
+            param_list = [i for i in range(1, 100, 5)]
+            for param in param_list:
+                clf_list.append(DecisionTreeClassifier(random_state=param))
+        elif args.opt == False:
+            clf = DecisionTreeClassifier(random_state=42)
+
+
+    elif args.method == "knn":
+        if args.opt == True:
+            param_list = [i for i in range(1, 150)]
+            for param in param_list:
+                clf_list.append(KNeighborsClassifier(n_neighbors=param))
+        elif args.opt == False:
+            clf = KNeighborsClassifier(n_neighbors=1)
+
     start_time = time.time()
-
-    if args.method == "cnn":
-        clf = MLPClassifier(hidden_layer_sizes=(100,), max_iter=1000, random_state=42)
-        cross_clf = MLPClassifier(hidden_layer_sizes=(100,), max_iter=1000, random_state=42)
-
-        # cut longer signals to shortest one - equal samples number is required for CNN
-        for i in range(len(train_set)):
-            train_set[i] = train_set[i][:3800]
-
-        for i in range(len(adhd_test_group)):
-            adhd_test_group[i] = adhd_test_group[i][:3800]
-
-        for i in range(len(control_test_group)):
-            control_test_group[i] = control_test_group[i][:3800]
-
-        for i in range(len(test_set)):
-            test_set[i] = test_set[i][:3800]
-
-        for i in range(len(cross_val_set)):
-            cross_val_set[i] = cross_val_set[i][:3800]
-
-    else:
-        if args.method == "forest":
-            clf = RandomForestClassifier()
-            cross_clf = RandomForestClassifier()
-
-        elif args.method == "tree":
-            clf = DecisionTreeClassifier(max_depth=5)    
-            corss_clf = DecisionTreeClassifier(max_depth=5)
-
-        elif args.method == "knn":
-            clf = KNeighborsClassifier(n_neighbors=6)
-            cross_clf = KNeighborsClassifier(n_neighbors=6)
+    cv = StratifiedKFold(n_splits=10)
     
-    # Model training
-    _logger.info("=" * SEP_NUM)
-    _logger.info("Training model...")
+    if args.opt == True:
+        max_acc = 0
+        best_parameter = 0
+        acc_list = []
 
-    scores = cross_val_score(cross_clf, cross_val_set, cross_val_labels, cv=10)
-    print("Cross-validation scores:", scores)
+        for param, clf in zip(param_list, clf_list):
+            scores = cross_val_score(clf, cross_val_set, cross_val_labels, cv=cv)
+            print("Cross-validation scores:", scores)
+            
+            mean = sum(scores) / len(scores)
+            acc_list.append(mean)
+            _logger.info(f"Cross-validation mean: {mean}, parameter: {param}")
 
-    clf.fit(train_set, labels)
+            if mean > max_acc:
+                best_parameter = param
+                max_acc = mean
 
-    _logger.info(f"Model trained in: {time.time() - start_time}")
-    _logger.info("=" * SEP_NUM)
+        _logger.info(80*'=')
+        _logger.info(f"Max accurancy: {max_acc}, best parameter: {best_parameter}")
+        _logger.info(80*'=')
 
-    # Classification
-    adhd_predict = clf.predict(adhd_test_group)
-    _logger.info(f"ADHD classification accuracy: {count_accurancy(adhd_test_group_labels, adhd_predict)}")
+        plt.plot(param_list, acc_list)
+        plt.title(args.method)
+        plt.xlabel('Wartość parametru')
+        plt.ylabel('Skuteczność')
+        plt.grid()
+        plt.show()
 
-    control_predict = clf.predict(control_test_group)
-    _logger.info(f"Control group classification accuracy: {count_accurancy(control_test_group_labels, control_predict)}")
+    if args.opt == False:
+        y_pred = cross_val_predict(clf, cross_val_set, cross_val_labels, cv=cv)
+        
+        # Compute confusion matrix
+        cm = confusion_matrix(cross_val_labels, y_pred)
 
+        # Plot confusion matrix
+        sns.heatmap(cm, annot=True, fmt='d', xticklabels=["ADHD", "control"], yticklabels=["ADHD", "control"], cmap=plt.cm.Blues)
+        plt.ylabel('True label')
+        plt.xlabel('Predicted label')
+        plt.title("Macierz pomyłek - Tree")
+        
+        tsne = TSNE(n_components=2, perplexity=30, learning_rate=200, max_iter=1000)
+        reduced_data = tsne.fit_transform(np.array(cross_val_set)) 
 
+        plt.figure(figsize=(12, 8))
+        scatter = plt.scatter(reduced_data[:, 0], reduced_data[:, 1], c=cross_val_labels, cmap='viridis')
+        plt.legend(*scatter.legend_elements(), title="Klasy")
+        plt.title('t-SNE - Wizualizacja cech')
+        plt.xlabel('Pierwszy komponent główny')
+        plt.ylabel('Drugi komponent główny')
+        plt.grid(True)  
 
-    # plt.figure(figsize=(24, 16))
-    # plot_tree(clf, filled=True, feature_names=feature_names, class_names=["ADHD", "Control"])
-    # plt.title("Decision Tree")
-
-    # pca = PCA(n_components=2)
-    # reduced_data = pca.fit_transform(train_set)
-
-    # Classification verification
-    tsne = TSNE(n_components=2, perplexity=30, learning_rate=200, max_iter=1000)
-    reduced_data = tsne.fit_transform(np.array(train_set)) 
-
-    plt.figure(figsize=(12, 8))
-    scatter = plt.scatter(reduced_data[:, 0], reduced_data[:, 1], c=labels, cmap='viridis')
-    plt.legend(*scatter.legend_elements(), title="Klasy")
-    plt.title('t-SNE - Wizualizacja cech')
-    plt.xlabel('Pierwszy komponent główny')
-    plt.ylabel('Drugi komponent główny')
-    plt.grid(True)  
-    
-    disp = ConfusionMatrixDisplay.from_estimator(
-        clf,
-        test_set,
-        test_set_labels,
-        display_labels=["adhd","control"],
-        cmap=plt.cm.Blues,
-        normalize=None,
-    )
-
-    plt.title("Macierz pomyłek")
-    plt.show()
+        plt.show()

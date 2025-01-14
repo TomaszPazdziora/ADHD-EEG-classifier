@@ -1,5 +1,9 @@
 import scipy.io
 import os
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.signal import iirnotch, filtfilt
+from logger_config import setup_logger
 
 # 1- The data is a .mat file type
 # 2- There are 4 files in .mat format, the first file called FC is related to the data of women in the control group, which
@@ -28,6 +32,7 @@ import os
 # NUM_OF_PATIENTS - (?)
 # NUM_OF_CHANNELS - 2
 
+_logger = setup_logger(__name__)
 CONST_IDX = 0  # const value used in database data loading
 TASK_DURATION = [30, 20, 20, 45, 15, 30, 30, 20, 20, 45, 45]  # in seconds
 DB_NAMES = ["FADHD", "FC", "MADHD", "MC"]
@@ -45,6 +50,13 @@ _TASK_CHANNELS = {
     10: ["Fz", "F4"]
 }
 
+fs = 256  # sampling freq
+f0 = 50   # freq to be cut
+Q = 30
+
+# Notch filter generation
+b, a = iirnotch(f0, Q, fs)
+
 
 def get_task_frequency(num_of_samples: int, task_idx: int) -> float:
     return num_of_samples / TASK_DURATION[task_idx]
@@ -56,12 +68,6 @@ def get_channel_name(task_idx: int, channel_idx: int) -> str:
 
 class Signal:
     def __init__(self, ch1_data: list, ch2_data: list, db_name: str, task_idx: int, patient_idx: int):
-        self.ch1_data = ch1_data
-        self.ch2_data = ch2_data
-        if len(ch1_data) != len(ch2_data):
-            raise RuntimeError(
-                "Both signals should have the same length!"
-            )
         self.num_of_samples = len(ch1_data)
         self.db_name = db_name
         self.task_idx = task_idx
@@ -75,6 +81,24 @@ class Signal:
         self.frequency = get_task_frequency(
             num_of_samples=self.num_of_samples, task_idx=task_idx
         )
+        self.ch1_data = self.standardize_signal(filtfilt(b, a, ch1_data))
+        self.ch2_data = self.standardize_signal(filtfilt(b, a, ch2_data))
+        if len(ch1_data) != len(ch2_data):
+            raise RuntimeError(
+                "Both signals should have the same length!"
+            )
+
+    
+    def standardize_signal(self, signal):
+        mean = np.mean(signal)
+        std_dev = np.std(signal)
+        
+        if std_dev == 0:
+            _logger.info(f"Error - std_dev == 0 - DB: {self.db_name} Patient: {self.patient_idx}, Task: {self.task_idx}")
+            return np.zeros_like(signal)
+        
+        standardized_signal = (signal - mean) / std_dev
+        return standardized_signal
 
     def __str__(self):
         return f"{self.db_name}, task: {self.task_idx}, patient: {self.patient_idx}, num of samples: {self.num_of_samples}, task duration: {TASK_DURATION[self.task_idx]}, freq: {self.frequency}"
