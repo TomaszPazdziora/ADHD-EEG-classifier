@@ -1,0 +1,38 @@
+@startuml waves
+
+rectangle "surowy_sygnał" #ADD1B2
+rectangle "wstępnie_przetworzony_sygnał" #ADD1B2
+rectangle "fala_alpha" #FFD700
+rectangle "fala_beta" #E3664A
+rectangle "fala_theta" #A9DCDF
+rectangle "fala_delta" #B4A7E5
+rectangle "fala_gamma" #EB937F
+
+rectangle "wektor_cech" #ADD1B2{
+    rectangle "cechy_alpha" #FFD700
+    rectangle "cechy_beta" #E3664A
+    rectangle "cechy_theta" #A9DCDF
+    rectangle "cechy_delta" #B4A7E5
+    rectangle "cechy_gamma" #EB937F
+}
+
+surowy_sygnał --> wstępnie_przetworzony_sygnał: standaryzacja\nfiltracja 50 Hz
+wstępnie_przetworzony_sygnał --> fala_alpha: transformacja\nfalkowa
+wstępnie_przetworzony_sygnał --> fala_beta
+wstępnie_przetworzony_sygnał --> fala_theta
+wstępnie_przetworzony_sygnał --> fala_delta
+wstępnie_przetworzony_sygnał --> fala_gamma
+
+fala_alpha --> cechy_statystyczne
+fala_beta --> cechy_statystyczne
+fala_theta --> cechy_statystyczne
+fala_delta --> cechy_statystyczne
+fala_gamma --> cechy_statystyczne
+
+"cechy_alpha" -[hidden]right-> "cechy_beta"
+"cechy_beta" -[hidden]right-> "cechy_theta"
+"cechy_theta" -[hidden]right-> "cechy_delta"
+"cechy_delta" -[hidden]right-> "cechy_gamma"
+
+cechy_statystyczne --> cechy_theta: średnia\nmediana\nwariancja\n odchylenie_std\n kurtoza \n wsp. skośności
+@enduml
