@@ -1,9 +1,8 @@
 import scipy.io
 import os
 import numpy as np
-import matplotlib.pyplot as plt
-from scipy.signal import iirnotch, filtfilt
 from logger_config import setup_logger
+from sig import Signal, SignalMeta
 
 # 1- The data is a .mat file type
 # 2- There are 4 files in .mat format, the first file called FC is related to the data of women in the control group, which
@@ -29,11 +28,10 @@ from logger_config import setup_logger
 # cell 11: Eyes closed, channels: Fz, F4, duration: 45s
 
 # NUM_OF_TASKS - 11
-# NUM_OF_PATIENTS - (?)
+# NUM_OF_PATIENTS - depends
 # NUM_OF_CHANNELS - 2
 
 _logger = setup_logger(__name__)
-CONST_IDX = 0  # const value used in database data loading
 TASK_DURATION = [30, 20, 20, 45, 15, 30, 30, 20, 20, 45, 45]  # in seconds
 DB_NAMES = ["FADHD", "FC", "MADHD", "MC"]
 _TASK_CHANNELS = {
@@ -50,58 +48,8 @@ _TASK_CHANNELS = {
     10: ["Fz", "F4"]
 }
 
-fs = 256  # sampling freq
-f0 = 50   # freq to be cut
-Q = 30
-
-# Notch filter generation
-b, a = iirnotch(f0, Q, fs)
-
-
-def get_task_frequency(num_of_samples: int, task_idx: int) -> float:
-    return num_of_samples / TASK_DURATION[task_idx]
-
-
 def get_channel_name(task_idx: int, channel_idx: int) -> str:
     return _TASK_CHANNELS[task_idx][channel_idx]
-
-
-class Signal:
-    def __init__(self, ch1_data: list, ch2_data: list, db_name: str, task_idx: int, patient_idx: int):
-        self.num_of_samples = len(ch1_data)
-        self.db_name = db_name
-        self.task_idx = task_idx
-        self.patient_idx = patient_idx
-        self.ch1_type = get_channel_name(
-            task_idx=task_idx, channel_idx=0
-        )
-        self.ch2_type = get_channel_name(
-            task_idx=task_idx, channel_idx=1
-        )
-        self.frequency = get_task_frequency(
-            num_of_samples=self.num_of_samples, task_idx=task_idx
-        )
-        self.ch1_data = self.standardize_signal(filtfilt(b, a, ch1_data))
-        self.ch2_data = self.standardize_signal(filtfilt(b, a, ch2_data))
-        if len(ch1_data) != len(ch2_data):
-            raise RuntimeError(
-                "Both signals should have the same length!"
-            )
-
-    
-    def standardize_signal(self, signal):
-        mean = np.mean(signal)
-        std_dev = np.std(signal)
-        
-        if std_dev == 0:
-            _logger.info(f"Error - std_dev == 0 - DB: {self.db_name} Patient: {self.patient_idx}, Task: {self.task_idx}")
-            return np.zeros_like(signal)
-        
-        standardized_signal = (signal - mean) / std_dev
-        return standardized_signal
-
-    def __str__(self):
-        return f"{self.db_name}, task: {self.task_idx}, patient: {self.patient_idx}, num of samples: {self.num_of_samples}, task duration: {TASK_DURATION[self.task_idx]}, freq: {self.frequency}"
 
 
 class ElectrodeData:
@@ -122,52 +70,56 @@ class Task:
         self.num_of_patients = len(self.patients)
 
 
-class DataLoader:
+class AdultDBLoader:
     """Loads data from given file. Example input: db_name='FC'"""
 
-    def __init__(self, db_name: str):
-        mat = scipy.io.loadmat("data" + os.sep + db_name + ".mat")
-        self.db_name = db_name
-        self.signal = mat[db_name][CONST_IDX]
-        self.tasks = self._load_all_tasks()
+    def __init__(self):
+        self.signals = self.load_all_signals()
 
-    def get_signal(self, task_idx, patient_idx) -> list[float]:
-        return Signal(
-            ch1_data=self.tasks[task_idx].patients[patient_idx].channels[0].data,
-            ch2_data=self.tasks[task_idx].patients[patient_idx].channels[1].data,
-            db_name=self.db_name,
-            task_idx=task_idx,
-            patient_idx=patient_idx
-        )
-
-    def get_number_of_samples(self, task_idx, patient_idx, channel_idx) -> int:
-        return self.tasks[task_idx].patients[patient_idx].channels[channel_idx].num_of_samples
-
-    def _load_single_electorode_data(self, task_idx: int, patient_idx: int, channel_idx: int) -> list:
+    def _load_single_electorode_data(self, task_idx: int, patient_idx: int, channel_idx: int, raw_data: list) -> list:
         samples = [sample[channel_idx]
-                   for sample in self.signal[task_idx][patient_idx]]
+                   for sample in raw_data[task_idx][patient_idx]]
         return ElectrodeData(data=samples)
 
-    def _load_all_channel_data(self, task_idx: int, patient_idx: int) -> list:
+    def _load_all_channel_data(self, task_idx: int, patient_idx: int, raw_data: list) -> list:
         return [
-            self._load_single_electorode_data(task_idx, patient_idx, 0),
-            self._load_single_electorode_data(task_idx, patient_idx, 1)
+            self._load_single_electorode_data(task_idx, patient_idx, 0, raw_data),
+            self._load_single_electorode_data(task_idx, patient_idx, 1, raw_data)
         ]
 
-    def _load_all_patients(self, task_idx: int) -> list:
+    def _load_all_patients(self, task_idx: int, raw_data: list) -> list:
         patient = [Patient(self._load_all_channel_data(
-            task_idx, task)) for task in range(len(self.signal[task_idx]))]
+            task_idx, task, raw_data)) for task in range(len(raw_data[task_idx]))]
         return patient
 
-    def _load_all_tasks(self) -> list:
-        tasks = [Task(self._load_all_patients(patient))
-                 for patient in range(len(self.signal))]
+    def _load_all_tasks(self, raw_data: list) -> list:
+        tasks = [Task(self._load_all_patients(patient, raw_data))
+                 for patient in range(len(raw_data))]
         return tasks
-
+    
+    def load_all_signals(self):
+        signals = []
+        for name in DB_NAMES:
+            mat = scipy.io.loadmat("adult_db" + os.sep + name + ".mat")
+            db = mat[name][0]
+            tasks = self._load_all_tasks(db)
+            for task_idx, task in enumerate(tasks):
+                for patient_idx, patient in enumerate(task.patients):
+                    for electrode_idx, electrode in enumerate(patient.channels):
+                        meta = SignalMeta(
+                            db_name="adult",
+                            group=name,
+                            patient_idx=patient_idx,
+                            electrode=get_channel_name(task_idx, electrode_idx),
+                            task=task_idx
+                        )
+                        signals.append(Signal(
+                                sig=electrode.data,
+                                meta=meta
+                            )
+                        )
+        return signals
 
 if __name__ == "__main__":
-    # examle data loading
-    data = DataLoader('FC')
-    print(
-        f"Reading one singal sample: {data.tasks[0].patients[0].channels[0].data[0]}")
-    print(data.get_signal(task_idx=0, patient_idx=0))
+    data = AdultDBLoader()
+    print('breakpoint')
