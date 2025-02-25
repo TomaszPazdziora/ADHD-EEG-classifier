@@ -2,7 +2,7 @@ import scipy.io
 import os
 import numpy as np
 from logger_config import setup_logger
-from sig import Signal, SignalMeta
+from sig import Signal, SignalMeta, PatientMeasurement
 
 # 1- The data is a .mat file type
 # 2- There are 4 files in .mat format, the first file called FC is related to the data of women in the control group, which
@@ -32,6 +32,7 @@ from sig import Signal, SignalMeta
 # NUM_OF_CHANNELS - 2
 
 _logger = setup_logger(__name__)
+NUM_OF_TASKS = 11
 TASK_DURATION = [30, 20, 20, 45, 15, 30, 30, 20, 20, 45, 45]  # in seconds
 DB_NAMES = ["FADHD", "FC", "MADHD", "MC"]
 _TASK_CHANNELS = {
@@ -74,7 +75,7 @@ class AdultDBLoader:
     """Loads data from given file. Example input: db_name='FC'"""
 
     def __init__(self):
-        self.signals = self.load_all_signals()
+        self.load_all_measurements()
 
     def _load_single_electorode_data(self, task_idx: int, patient_idx: int, channel_idx: int, raw_data: list) -> list:
         samples = [sample[channel_idx]
@@ -97,29 +98,49 @@ class AdultDBLoader:
                  for patient in range(len(raw_data))]
         return tasks
     
-    def load_all_signals(self):
+    def get_all_group_signals(self, group):
         signals = []
-        for name in DB_NAMES:
-            mat = scipy.io.loadmat("adult_db" + os.sep + name + ".mat")
-            db = mat[name][0]
-            tasks = self._load_all_tasks(db)
-            for task_idx, task in enumerate(tasks):
-                for patient_idx, patient in enumerate(task.patients):
-                    for electrode_idx, electrode in enumerate(patient.channels):
-                        meta = SignalMeta(
-                            db_name="adult",
-                            group=name,
-                            patient_idx=patient_idx,
-                            electrode=get_channel_name(task_idx, electrode_idx),
-                            task=task_idx
+        mat = scipy.io.loadmat("adult_db" + os.sep + group + ".mat")
+        db = mat[group][0]
+        tasks = self._load_all_tasks(db)
+        for task_idx, task in enumerate(tasks):
+            for patient_idx, patient in enumerate(task.patients):
+                for electrode_idx, electrode in enumerate(patient.channels):
+                    meta = SignalMeta(
+                        db_name="adult",
+                        group=group,
+                        patient_idx=patient_idx,
+                        electrode=get_channel_name(task_idx, electrode_idx),
+                        task=task_idx
+                    )
+                    signals.append(Signal(
+                            sig=electrode.data,
+                            meta=meta
                         )
-                        signals.append(Signal(
-                                sig=electrode.data,
-                                meta=meta
-                            )
-                        )
+                    )
         return signals
+
+    def sort_signals_by_patient_idx(self, signals: list[Signal]):
+        return sorted(signals, key=lambda sig: sig.meta.patient_idx)
+
+    def load_all_measurements(self):
+        self.measurements = {}
+        sig_dict = {}
+        for group in DB_NAMES:
+            signals = self.get_all_group_signals(group=group)
+            signals = self.sort_signals_by_patient_idx(signals)
+            sig_dict[group] = signals
+
+        for gr_name, sig_list in sig_dict.items():
+            if len(sig_list) % NUM_OF_TASKS != 0:
+                raise ValueError
+            for i in range(0, len(sig_list), NUM_OF_TASKS*2):
+                pat_str = f"patient_{sig_list[i].meta.patient_idx}"
+                if gr_name not in self.measurements:
+                    self.measurements[gr_name] = {}
+                self.measurements[gr_name][pat_str] = PatientMeasurement(sig_list[i:i+NUM_OF_TASKS])
+
 
 if __name__ == "__main__":
     data = AdultDBLoader()
-    print('breakpoint')
+    print(data.measurements['FC']['patient_0'].signals[0].data)

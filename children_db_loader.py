@@ -4,7 +4,7 @@ import scipy.io
 import os
 from pathlib import Path
 from logger_config import setup_logger
-from sig import SignalMeta, Signal
+from sig import SignalMeta, Signal, PatientMeasurement
 import re
 
 # Participants were 61 children with ADHD and 60 healthy controls (boys and girls, ages 7-12). The ADHD children were diagnosed by an experienced psychiatrist to DSM-IV criteria, and have taken Ritalin for up to 6 months. None of the children in the control group had a history of psychiatric disorders, epilepsy, or any report of high-risk behaviors.
@@ -47,11 +47,14 @@ class ChildrenDBLoader:
         'Pz' : 19
     }
 
+    def __init__(self):
+        self.load_all_measurements()
+
     def get_single_electrode_sig(self, db: dict, db_name: str, electrode: str):
         electrode_id = self.children_electrodes[electrode]
-        return [db[db_name][i][electrode_id] for i in range(len(db[db_name]))]
+        return [db[db_name][i][electrode_id-1] for i in range(len(db[db_name]))]
 
-    def load_all_patients_signals_for_single_electrode(self, group: str, electrode: str):
+    def get_all_patients_signals_for_single_electrode(self, group: str, electrode: str):
         """example: loads all signals for electrode F4 - of all patients in ADHD gorup"""
         signals = []
         if group == "ADHD":
@@ -80,21 +83,56 @@ class ChildrenDBLoader:
             ) 
         return signals
     
-    def get_all_signals_for_patient(self):
-        #todo
-        pass
+    def get_all_signals_for_patient(self, group, db_name):
+        signals = []
+        if group == "ADHD":
+            dir = "ADHD"
+        elif group == "Control":
+            dir = "Control"
+        else:
+            raise ValueError("Unrecognized group name. Try ADHD or Control.")
+        
+        filepath = "children_db" + os.sep + dir + os.sep + db_name 
+        mat = scipy.io.loadmat(filepath)
+
+        for electrode, idx in self.children_electrodes.items():
+            meta = SignalMeta(
+                db_name="children",
+                group=dir,
+                patient_idx=int(re.findall(r"\d+", db_name)[0]),
+                electrode=electrode
+            )
+            signals.append(Signal(
+                sig=self.get_single_electrode_sig(mat, db_name[:-4], electrode),
+                meta=meta
+                )
+            )
+        return signals
+    
+    def load_all_measurements(self):
+        self.measurements = {}
+        self.measurements["ADHD"] = {}
+        self.measurements["Control"] = {}
+
+        for db_name in self.ADHD_FILES:
+            signals = self.get_all_signals_for_patient(
+                group="ADHD",
+                db_name=db_name
+            )
+            self.measurements["ADHD"][db_name] = PatientMeasurement(signals)
+            
+        for db_name in self.CONTROL_FILES:
+            signals = self.get_all_signals_for_patient(
+                group="Control",
+                db_name=db_name
+            )
+            self.measurements["Control"][db_name] = PatientMeasurement(signals)
+
 
 
 if __name__ == "__main__":
-    electrode = "F4"
-    Fs = 128
-
     data_loader = ChildrenDBLoader()
-    sign = data_loader.load_all_patients_signals_for_single_electrode(
-        group='ADHD',
-        electrode=electrode
-    )
-    sorted = sorted(sign, key=lambda sig: sig.meta.patient_idx)
-    for s in sorted:
-        print(s.meta.patient_idx)
-    print('lux')
+    print(data_loader.measurements['ADHD']['v204.mat'].signals[0].data)
+    print(data_loader.measurements['ADHD']['v204.mat'].signals[1].meta.electrode)
+    print(data_loader.measurements['ADHD']['v204.mat'].signals[2].meta.electrode)
+    print(data_loader.measurements['ADHD']['v204.mat'].signals[3].meta.electrode)

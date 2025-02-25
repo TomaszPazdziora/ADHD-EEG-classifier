@@ -11,6 +11,7 @@ class SignalMeta:
 class Signal:
     def __init__(self, sig: list, meta: SignalMeta):
         self.data = sig
+        self.features = None
         self.num_of_samples = len(sig)
         self.meta = meta
         if self.meta.db_name == "adult":
@@ -19,3 +20,23 @@ class Signal:
             self.fs = 128
         else: 
             raise ValueError("Unrecognized database name!")
+        
+class PatientMeasurement:
+    def __init__(self, signals):
+        self.signals: list[Signal] = signals
+        self.features: list | None = None
+        self.check_signals_integrity()
+
+    def check_signals_integrity(self):
+        """checks if every signal in object came from the same pacient"""
+        ext_fs = self.signals[0].fs
+        exp_db_name = self.signals[0].meta.db_name
+        ext_group = self.signals[0].meta.group
+        ext_patient_idx = self.signals[0].meta.patient_idx
+
+        for sig in self.signals:
+            if sig.fs != ext_fs or \
+            sig.meta.db_name != exp_db_name or \
+            sig.meta.group != ext_group or \
+            sig.meta.patient_idx != ext_patient_idx:
+                raise ValueError("Signals loaded incorrectly!")
