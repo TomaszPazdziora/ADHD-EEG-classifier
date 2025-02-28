@@ -129,10 +129,17 @@ class ChildrenDBLoader:
             self.measurements["Control"][db_name] = PatientMeasurement(signals)
 
 
-
 if __name__ == "__main__":
     data_loader = ChildrenDBLoader()
     print(data_loader.measurements['ADHD']['v204.mat'].signals[0].data)
     print(data_loader.measurements['ADHD']['v204.mat'].signals[1].meta.electrode)
     print(data_loader.measurements['ADHD']['v204.mat'].signals[2].meta.electrode)
     print(data_loader.measurements['ADHD']['v204.mat'].signals[3].meta.electrode)
+
+    i = 0
+    for group, patients in data_loader.measurements.items(): #FADHD FC
+        for patient, measurement in patients.items():
+            for sig in measurement.signals:
+                _logger.info(sig)
+                i += 1
+    _logger.info(f"Loaded {i} signals")

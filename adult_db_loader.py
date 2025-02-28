@@ -105,6 +105,8 @@ class AdultDBLoader:
         tasks = self._load_all_tasks(db)
         for task_idx, task in enumerate(tasks):
             for patient_idx, patient in enumerate(task.patients):
+                if group == "FADHD" and patient_idx == 7:
+                    continue
                 for electrode_idx, electrode in enumerate(patient.channels):
                     meta = SignalMeta(
                         db_name="adult",
@@ -138,9 +140,8 @@ class AdultDBLoader:
                 pat_str = f"patient_{sig_list[i].meta.patient_idx}"
                 if gr_name not in self.measurements:
                     self.measurements[gr_name] = {}
-                self.measurements[gr_name][pat_str] = PatientMeasurement(sig_list[i:i+NUM_OF_TASKS])
-
+                self.measurements[gr_name][pat_str] = PatientMeasurement(sig_list[i:i+NUM_OF_TASKS*2])
 
 if __name__ == "__main__":
-    data = AdultDBLoader()
-    print(data.measurements['FC']['patient_0'].signals[0].data)
+    data_loader = AdultDBLoader()
+    print(data_loader.measurements['FC']['patient_0'].signals[0].data)
