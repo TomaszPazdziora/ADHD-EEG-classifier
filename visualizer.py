@@ -85,10 +85,11 @@ def save_all_db_signals_to_file(data_loader):
     iterate_over_whole_db_signals(data_loader, save_signals_to_files)
 
 if __name__ == "__main__":
-    ch_loader = ChildrenDBLoader()
-    filter_all_db_signals(ch_loader)
-    standarize_all_db_signals(ch_loader)
-    save_all_db_signals_to_file(ch_loader)
+    # loader = ChildrenDBLoader()
+    loader = AdultDBLoader()
+    filter_all_db_signals(loader)
+    standarize_all_db_signals(loader)
+    save_all_db_signals_to_file(loader)
 
     # signals = c.load_all_patients_signals_for_single_electrode("ADHD", "F4")
     # filter_signals(signals)

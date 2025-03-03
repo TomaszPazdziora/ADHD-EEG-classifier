@@ -11,7 +11,7 @@ class SignalMeta:
 class Signal:
     def __init__(self, sig: list, meta: SignalMeta):
         self.data = sig
-        self.features = None
+        self.features = []
         self.num_of_samples = len(sig)
         self.meta = meta
         if self.meta.db_name == "adult":
@@ -27,7 +27,7 @@ class Signal:
 class PatientMeasurement:
     def __init__(self, signals):
         self.signals: list[Signal] = signals
-        self.features: list | None = None
+        self.features: list = []
         self.check_signals_integrity()
 
     def check_signals_integrity(self):

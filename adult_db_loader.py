@@ -105,7 +105,7 @@ class AdultDBLoader:
         tasks = self._load_all_tasks(db)
         for task_idx, task in enumerate(tasks):
             for patient_idx, patient in enumerate(task.patients):
-                if group == "FADHD" and patient_idx == 7:
+                if group == "FADHD" and patient_idx == 6:
                     continue
                 for electrode_idx, electrode in enumerate(patient.channels):
                     meta = SignalMeta(
