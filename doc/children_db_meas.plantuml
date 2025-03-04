@@ -1,0 +1,38 @@
+@startuml measures
+
+rectangle "Zbiór pomiarów dla jednego pacjenta\njeden pomiar * 19 elektrod" #ADD1B2{
+    rectangle "Elektroda_Fp1" #FFD700
+    rectangle "Elektroda_Fp2" #E3664A
+    rectangle "Elektroda_F3" #A9DCDF
+    rectangle "Elektroda_F4" #B4A7E5
+    rectangle "Pozostałe_elektrody..." #EB937F
+    rectangle "Elektroda_Pz" #B4A7E5
+}
+
+rectangle "Wektor cech dla modelu\n1 pomiar * 19 elektrod * 5 rodzajów fal mózgowych * X cech" #ADD1B2{
+    rectangle "Cechy_Fp1" #FFD700
+    rectangle "Cechy_Fp2" #E3664A
+    rectangle "Cechy_F3" #A9DCDF
+    rectangle "Cechy_F4" #B4A7E5
+    rectangle "Pozostełe_cechy..." #EB937F
+    rectangle "Cechy_Pz" #B4A7E5
+}
+
+rectangle ekstrakcja_cech
+
+"Elektroda_Fp1" -[hidden]right-> "Elektroda_Fp2"
+"Elektroda_Fp2" -[hidden]right-> "Elektroda_F3"
+"Elektroda_F3" -[hidden]right-> "Elektroda_F4"
+"Elektroda_F4" -[hidden]right-> "Pozostałe_elektrody..."
+"Pozostałe_elektrody..." -[hidden]right-> "Elektroda_Pz"
+
+"Cechy_Fp1" -[hidden]right-> "Cechy_Fp2"
+"Cechy_Fp2" -[hidden]right-> "Cechy_F3"
+"Cechy_F3" -[hidden]right-> "Cechy_F4"
+"Cechy_F4" -[hidden]right-> "Pozostełe_cechy..."
+"Pozostełe_cechy..." -[hidden]right-> "Cechy_Pz"
+
+Elektroda_F4 --> ekstrakcja_cech
+ekstrakcja_cech --> Cechy_F4
+
+@enduml
