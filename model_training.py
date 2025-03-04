@@ -1,7 +1,7 @@
 from sklearn.ensemble import RandomForestClassifier
 from adult_db_loader import AdultDBLoader
 from children_db_loader import ChildrenDBLoader
-from feat import extract_all_db_features
+from features import extract_all_db_features
 from sklearn.model_selection import cross_val_predict, StratifiedKFold, cross_val_score
 from sklearn.neural_network import MLPClassifier
 from sklearn.ensemble import RandomForestClassifier
