@@ -1,0 +1,38 @@
+@startuml measures
+
+rectangle "Zbiór pomiarów dla jednego pacjenta\n11 zadań * 2 elektrody" #ADD1B2{
+    rectangle "Zadanie_1_Cz" #FFD700
+    rectangle "Zadanie_1_F4" #E3664A
+    rectangle "Zadanie_2_Cz" #A9DCDF
+    rectangle "Zadanie_2_F4" #B4A7E5
+    rectangle "Pozostełe_pomiary..." #EB937F
+    rectangle "Zadanie_11_F4" #B4A7E5
+}
+
+rectangle "Wektor cech dla modelu\n11 zadań * 2 elektrody * 5 rodzajów fal mózgowych * X cech" #ADD1B2{
+    rectangle "Cechy_1_Cz" #FFD700
+    rectangle "Cechy_1_F4" #E3664A
+    rectangle "Cechy_2_Cz" #A9DCDF
+    rectangle "Cechy_2_F4" #B4A7E5
+    rectangle "Pozostełe_cechy..." #EB937F
+    rectangle "Cechy_11_F4" #B4A7E5
+}
+
+rectangle ekstrakcja_cech
+
+"Zadanie_1_Cz" -[hidden]right-> "Zadanie_1_F4"
+"Zadanie_1_F4" -[hidden]right-> "Zadanie_2_Cz"
+"Zadanie_2_Cz" -[hidden]right-> "Zadanie_2_F4"
+"Zadanie_2_F4" -[hidden]right-> "Pozostełe_pomiary..."
+"Pozostełe_pomiary..." -[hidden]right-> "Zadanie_11_F4"
+
+"Cechy_1_Cz" -[hidden]right-> "Cechy_1_F4"
+"Cechy_1_F4" -[hidden]right-> "Cechy_2_Cz"
+"Cechy_2_Cz" -[hidden]right-> "Cechy_2_F4"
+"Cechy_2_F4" -[hidden]right-> "Pozostełe_cechy..."
+"Pozostełe_cechy..." -[hidden]right-> "Cechy_11_F4"
+
+Zadanie_2_F4 --> ekstrakcja_cech
+ekstrakcja_cech --> Cechy_2_F4
+
+@enduml

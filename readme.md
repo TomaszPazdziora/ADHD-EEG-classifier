@@ -24,22 +24,22 @@ pip install -r requirements.txt
 
 ## How to start
 
-Currently 'features.py' is the main project file. Example runs:
+Currently 'model_training.py' is the main project file. Example runs:
 
 ```bash
-python3 features.py --method forest
+python3 model_training.py --method forest
 ```
 
 ```bash
-python3 features.py --method knn --opt
+python3 model_training.py --method knn --opt
 ```
 
 ```bash
-python3 features.py --method nn --hist
+python3 model_training.py --method nn --hist
 ```
 
 If get lost execute:
 ```bash
-python3 features.py -h
+python3 model_training.py -h
 ```
 
