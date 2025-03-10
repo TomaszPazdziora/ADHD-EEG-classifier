@@ -1,7 +1,8 @@
-from sig import Signal
+from sig import Signal, PatientMeasurement
 from children_db_loader import ChildrenDBLoader
 from adult_db_loader import AdultDBLoader
 from pre_processing import standarize_all_db_signals, filter_all_db_signals, iterate_over_whole_db_signals
+from features import load_features_for_model, feature_names
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -84,13 +85,36 @@ def save_signals_to_files(singals: list[Signal]):
 def save_all_db_signals_to_file(data_loader):
     iterate_over_whole_db_signals(data_loader, save_signals_to_files)
 
+def save_features_histograms(adhd: list[PatientMeasurement], control: list[PatientMeasurement]):
+    for i, name in enumerate(feature_names):
+        adhd_hist = []
+        control_hist = []
+
+        for meas in adhd:
+            adhd_hist.append(meas.features[i])
+        for meas in control:
+            control_hist.append(meas.features[i])
+
+        plt.hist(adhd_hist, histtype='stepfilled', alpha=0.3, bins=25, edgecolor='black', label='adhd')
+        plt.hist(control_hist, histtype='stepfilled', alpha=0.3, bins=25, edgecolor='black', label='control')
+        plt.title('Histogram ' + name)
+        plt.xlabel('Values')
+        plt.ylabel('Number of occurences')
+
+        save_dir = 'plots' + os.sep + "features_histograms"
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+        plt.legend()
+        plt.savefig(save_dir + os.sep + name)
+        plt.clf()
+
+
 if __name__ == "__main__":
     # loader = ChildrenDBLoader()
     loader = AdultDBLoader()
-    filter_all_db_signals(loader)
-    standarize_all_db_signals(loader)
-    save_all_db_signals_to_file(loader)
-
+    adhd_features, control_features = load_features_for_model(loader=loader, features_type="cwt")
+    save_features_histograms(adhd_features, control_features)
+    
     # signals = c.load_all_patients_signals_for_single_electrode("ADHD", "F4")
     # filter_signals(signals)
     # standardize_signals(signals)
