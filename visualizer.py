@@ -1,6 +1,6 @@
 from sig import Signal, PatientMeasurement
 from children_db_loader import ChildrenDBLoader
-from adult_db_loader import AdultDBLoader
+from adult_db_loader import AdultDBLoader, _TASK_CHANNELS
 from pre_processing import standarize_all_db_signals, filter_all_db_signals, iterate_over_whole_db_signals
 from features import load_features_for_model, feature_names
 
@@ -86,27 +86,36 @@ def save_all_db_signals_to_file(data_loader):
     iterate_over_whole_db_signals(data_loader, save_signals_to_files)
 
 def save_features_histograms(adhd: list[PatientMeasurement], control: list[PatientMeasurement]):
-    for i, name in enumerate(feature_names):
-        adhd_hist = []
-        control_hist = []
+    for task_electrode_idx in range(0, 22):
+        for i, name in enumerate(feature_names):
+            adhd_hist = []
+            control_hist = []
 
-        for meas in adhd:
-            adhd_hist.append(meas.features[i])
-        for meas in control:
-            control_hist.append(meas.features[i])
+            for meas in adhd:
+                adhd_hist.append(meas.features[task_electrode_idx * len(feature_names) + i])
+            for meas in control:
+                control_hist.append(meas.features[task_electrode_idx * len(feature_names) + i])
 
-        plt.hist(adhd_hist, histtype='stepfilled', alpha=0.3, bins=25, edgecolor='black', label='adhd')
-        plt.hist(control_hist, histtype='stepfilled', alpha=0.3, bins=25, edgecolor='black', label='control')
-        plt.title('Histogram ' + name)
-        plt.xlabel('Values')
-        plt.ylabel('Number of occurences')
+            _logger.info(f"number of hist values (adhd): {len(adhd_hist)}")
+            _logger.info(f"number of hist values (control): {len(control_hist)}")
 
-        save_dir = 'plots' + os.sep + "features_histograms"
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
-        plt.legend()
-        plt.savefig(save_dir + os.sep + name)
-        plt.clf()
+            # 79 * 22 taski            
+            task_idx = int(task_electrode_idx/2)
+            electrode_idx = task_electrode_idx % 2
+            electrode = _TASK_CHANNELS[task_idx][electrode_idx]
+            save_dir = f"plots{os.sep}features_histograms{os.sep}task_{task_idx}"
+
+            plt.hist(adhd_hist, histtype='stepfilled', alpha=0.3, bins=25, edgecolor='black', label='adhd')
+            plt.hist(control_hist, histtype='stepfilled', alpha=0.3, bins=25, edgecolor='black', label='control')
+            plt.title('Histogram ' + name + ", zadanie: " + str(task_idx) + ", elektroda: " + electrode)
+            plt.xlabel('Values')
+            plt.ylabel('Number of occurences')
+            
+            if not os.path.exists(save_dir):
+                os.makedirs(save_dir)
+            plt.legend()
+            plt.savefig(save_dir + os.sep + name + "_" + electrode)
+            plt.clf()
 
 
 if __name__ == "__main__":

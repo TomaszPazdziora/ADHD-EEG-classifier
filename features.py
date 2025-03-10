@@ -9,6 +9,7 @@ from adult_db_loader import AdultDBLoader
 from children_db_loader import ChildrenDBLoader
 import scipy.signal as signal
 from scipy.signal import spectrogram
+import os
 
 _logger = setup_logger(__name__)
 SEP_NUM = 60
@@ -54,6 +55,30 @@ def get_all_waves_statistical_features(waves: dict) -> list:
         all_waves_features.extend(get_statistical_features(waves[b]))
     return all_waves_features
 
+def plot_waves(coefs: list, sig_path: str) -> None:
+    delta = plt.subplot(3,2,1)
+    delta.set_title("Fale delta")
+    theta = plt.subplot(3,2,2)
+    theta.set_title("Fale theta")
+    alfa = plt.subplot(3,2,3)
+    alfa.set_title("Fale alfa")
+    beta = plt.subplot(3,2,4)
+    beta.set_title("Fale beta")
+    gamma = plt.subplot(3,2,5)
+    gamma.set_title("Fale gamma do 64 Hz")
+    gamma_hf = plt.subplot(3,2,6)
+    gamma_hf.set_title("Fale gamma 64-128 Hz")
+    plt.subplots_adjust(hspace=0.8, wspace=0.5)
+
+    delta.plot(coefs[0])
+    theta.plot(coefs[1])
+    alfa.plot(coefs[2])
+    beta.plot(coefs[3])
+    gamma.plot(coefs[4])
+    gamma_hf.plot(coefs[5])
+    plt.savefig(sig_path)
+    plt.clf()
+
 
 def get_signal_features(signals: list[Signal]) -> list:
     """format list of features for model
@@ -77,12 +102,18 @@ def get_signal_features(signals: list[Signal]) -> list:
 
         elif sig.fs == 256:
             coefs = wavedec(sig.data, 'db4', level=5)
+
+            # dir_path = f".{os.sep}plots{os.sep}waves{os.sep}{sig.meta.group}{os.sep}task{sig.meta.task}"
+            # os.makedirs(dir_path, exist_ok=True)
+            # file_path = dir_path + f"{os.sep}{sig.meta.group}_patient_{sig.meta.patient_idx}_electrode_{sig.meta.electrode}.png"
+            # plot_waves(coefs=coefs, sig_path=file_path)
+
             for i in range(len(coefs)-1):
                 waves[BRAIN_WAVES[i]] = coefs[i+1]
 
-        frequencies, psd_values = signal.welch(sig.data, sig.fs, nperseg=256)
-        sig.features = (get_all_waves_statistical_features(waves))
-        sig.features.extend(psd_values)
+        sig.features = get_all_waves_statistical_features(waves)
+        # frequencies, psd_values = signal.welch(sig.data, sig.fs, nperseg=256)
+        # sig.features.extend(psd_values)
 
 def get_all_db_signal_features(loader):
     iterate_over_whole_db_signals(loader, get_signal_features)
@@ -146,6 +177,7 @@ def load_features_for_model(loader: ChildrenDBLoader | AdultDBLoader, features_t
     return adhd_set, control_set
 
 if __name__ == "__main__":
-    # loader = AdultDBLoader()
-    loader = ChildrenDBLoader()
+    loader = AdultDBLoader()
+    # loader = ChildrenDBLoader()
+    adhd, contorl = load_features_for_model(loader=loader, features_type="cwt")
 
