@@ -1,12 +1,14 @@
 from dataclasses import dataclass
 
+
 @dataclass
 class SignalMeta:
-    db_name: str # adult or children
-    group: str # adhd or control
-    patient_idx: int 
+    db_name: str  # adult or children
+    group: str  # adhd or control
+    patient_idx: int
     electrode: str
     task: int = -1
+
 
 class Signal:
     def __init__(self, sig: list, meta: SignalMeta):
@@ -18,12 +20,13 @@ class Signal:
             self.fs = 256
         elif self.meta.db_name == "children":
             self.fs = 128
-        else: 
+        else:
             raise ValueError("Unrecognized database name!")
-        
+
     def __str__(self):
         return f"""db_name: {self.meta.db_name}, group: {self.meta.group}, patient_idx: {self.meta.patient_idx}, electrode: {self.meta.electrode}, task: {self.meta.task}"""
-        
+
+
 class PatientMeasurement:
     def __init__(self, signals):
         self.signals: list[Signal] = signals
@@ -39,8 +42,7 @@ class PatientMeasurement:
 
         for sig in self.signals:
             if sig.fs != ext_fs or \
-            sig.meta.db_name != exp_db_name or \
-            sig.meta.group != ext_group or \
-            sig.meta.patient_idx != ext_patient_idx:
+                    sig.meta.db_name != exp_db_name or \
+                    sig.meta.group != ext_group or \
+                    sig.meta.patient_idx != ext_patient_idx:
                 raise ValueError("Signals loaded incorrectly!")
-            

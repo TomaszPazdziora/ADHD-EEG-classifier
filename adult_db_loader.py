@@ -49,6 +49,7 @@ _TASK_CHANNELS = {
     10: ["Fz", "F4"]
 }
 
+
 def get_channel_name(task_idx: int, channel_idx: int) -> str:
     return _TASK_CHANNELS[task_idx][channel_idx]
 
@@ -84,8 +85,10 @@ class AdultDBLoader:
 
     def _load_all_channel_data(self, task_idx: int, patient_idx: int, raw_data: list) -> list:
         return [
-            self._load_single_electorode_data(task_idx, patient_idx, 0, raw_data),
-            self._load_single_electorode_data(task_idx, patient_idx, 1, raw_data)
+            self._load_single_electorode_data(
+                task_idx, patient_idx, 0, raw_data),
+            self._load_single_electorode_data(
+                task_idx, patient_idx, 1, raw_data)
         ]
 
     def _load_all_patients(self, task_idx: int, raw_data: list) -> list:
@@ -97,7 +100,7 @@ class AdultDBLoader:
         tasks = [Task(self._load_all_patients(patient, raw_data))
                  for patient in range(len(raw_data))]
         return tasks
-    
+
     def get_all_group_signals(self, group):
         signals = []
         mat = scipy.io.loadmat("adult_db" + os.sep + group + ".mat")
@@ -116,9 +119,9 @@ class AdultDBLoader:
                         task=task_idx
                     )
                     signals.append(Signal(
-                            sig=electrode.data,
-                            meta=meta
-                        )
+                        sig=electrode.data,
+                        meta=meta
+                    )
                     )
         return signals
 
@@ -140,7 +143,9 @@ class AdultDBLoader:
                 pat_str = f"patient_{sig_list[i].meta.patient_idx}"
                 if gr_name not in self.measurements:
                     self.measurements[gr_name] = {}
-                self.measurements[gr_name][pat_str] = PatientMeasurement(sig_list[i:i+NUM_OF_TASKS*2])
+                self.measurements[gr_name][pat_str] = PatientMeasurement(
+                    sig_list[i:i+NUM_OF_TASKS*2])
+
 
 if __name__ == "__main__":
     data_loader = AdultDBLoader()
