@@ -1,8 +1,7 @@
 from sig import Signal, PatientMeasurement
-from children_db_loader import ChildrenDBLoader
 from adult_db_loader import AdultDBLoader, _TASK_CHANNELS
-from pre_processing import standarize_all_db_signals, filter_all_db_signals, iterate_over_whole_db_signals
-from features import load_features_for_model, feature_names
+from pre_processing import iterate_over_whole_db_signals
+from features import feature_names
 from scipy.signal import spectrogram
 
 import matplotlib.pyplot as plt
@@ -131,7 +130,6 @@ def save_features_histograms(adhd: list[PatientMeasurement], control: list[Patie
 
 
 if __name__ == "__main__":
-    # loader = ChildrenDBLoader()
     loader = AdultDBLoader()
     # adhd_features, control_features = load_features_for_model(loader=loader, features_type="cwt")
     # save_features_histograms(adhd_features, control_features)

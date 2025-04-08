@@ -1,6 +1,6 @@
 from scipy.signal import iirnotch, filtfilt
 from logger_config import setup_logger
-from sig import Signal, PatientMeasurement
+from sig import Signal
 import numpy as np
 
 

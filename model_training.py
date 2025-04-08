@@ -1,11 +1,10 @@
 from sklearn.ensemble import RandomForestClassifier
 from adult_db_loader import AdultDBLoader
-from children_db_loader import ChildrenDBLoader
-from features import extract_all_db_features, load_all_raw_db_signals_to_measurement_features, load_features_for_model
+from features import load_features_for_model
 from sklearn.model_selection import cross_val_predict, StratifiedKFold, cross_val_score
 from sklearn.neural_network import MLPClassifier
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score, confusion_matrix
+from sklearn.metrics import confusion_matrix
 import matplotlib.pyplot as plt
 import argparse
 import seaborn as sns
@@ -24,7 +23,6 @@ if __name__ == "__main__":
     args=parser.parse_args()
 
     loader = AdultDBLoader()
-    # loader = ChildrenDBLoader()
     adhd_set, control_set = load_features_for_model(loader=loader, features_type="cwt")
     clf_list = []
     param_list = []

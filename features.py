@@ -6,7 +6,6 @@ from pywt import wavedec
 from logger_config import setup_logger
 from pre_processing import iterate_over_whole_db_signals, iterate_over_whole_db, filter_all_db_signals, standarize_all_db_signals
 from adult_db_loader import AdultDBLoader
-from children_db_loader import ChildrenDBLoader
 import scipy.signal as signal
 from scipy.signal import spectrogram
 import os
@@ -143,7 +142,7 @@ def load_all_raw_db_signals_to_measurement_features(loader):
     standarize_all_db_signals(loader)
     get_all_db_signals_as_measurement_features(loader)
 
-def load_features_for_model(loader: ChildrenDBLoader | AdultDBLoader, features_type: str):
+def load_features_for_model(loader: AdultDBLoader, features_type: str):
     adhd_set = [] # list of patient measurements
     control_set = []
 
@@ -154,14 +153,7 @@ def load_features_for_model(loader: ChildrenDBLoader | AdultDBLoader, features_t
     else:
         raise ValueError("Unknown feature_type parameter!")
 
-    if type(loader) == ChildrenDBLoader:
-        for p_name in loader.measurements["ADHD"]:
-            adhd_set.append(loader.measurements["ADHD"][p_name])
-
-        for p_name in loader.measurements["Control"]:
-            control_set.append(loader.measurements["Control"][p_name])
-
-    elif type(loader) == AdultDBLoader:
+    if type(loader) == AdultDBLoader:
         for p_name in loader.measurements["FADHD"]:
             adhd_set.append(loader.measurements["FADHD"][p_name])
         for p_name in loader.measurements["MADHD"]:
@@ -178,6 +170,5 @@ def load_features_for_model(loader: ChildrenDBLoader | AdultDBLoader, features_t
 
 if __name__ == "__main__":
     loader = AdultDBLoader()
-    # loader = ChildrenDBLoader()
     adhd, contorl = load_features_for_model(loader=loader, features_type="cwt")
 

@@ -1,17 +1,8 @@
-from sklearn.ensemble import RandomForestClassifier
 from adult_db_loader import AdultDBLoader
-from children_db_loader import ChildrenDBLoader
 from features import extract_all_db_features,  load_all_raw_db_signals_to_measurement_features
 from sklearn.model_selection import cross_val_predict, StratifiedKFold, cross_val_score
-from sklearn.neural_network import MLPClassifier
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score, confusion_matrix
 import matplotlib.pyplot as plt
-import argparse
-import seaborn as sns
 from logger_config import setup_logger
-import time
-import tensorflow as tf
 from tensorflow import keras
 from keras import layers
 from sklearn.model_selection import train_test_split
@@ -26,14 +17,7 @@ def load_features_for_model(loader):
     # extract_all_db_features(loader)
     load_all_raw_db_signals_to_measurement_features(loader)
 
-    if type(loader) == ChildrenDBLoader:
-        for p_name in loader.measurements["ADHD"]:
-            adhd_features.append(loader.measurements["ADHD"][p_name].features)
-
-        for p_name in loader.measurements["Control"]:
-            control_features.append(loader.measurements["Control"][p_name].features)
-
-    elif type(loader) == AdultDBLoader:
+    if type(loader) == AdultDBLoader:
         for p_name in loader.measurements["FADHD"]:
             adhd_features.append(loader.measurements["FADHD"][p_name].features)
         for p_name in loader.measurements["MADHD"]:
@@ -51,7 +35,6 @@ def load_features_for_model(loader):
 
 if __name__ == "__main__":
     loader = AdultDBLoader()
-    # loader = ChildrenDBLoader()
     adhd_features, control_features = load_features_for_model(loader)
     clf_list = []
 
