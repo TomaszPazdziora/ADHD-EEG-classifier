@@ -1,7 +1,7 @@
 from sklearn.ensemble import RandomForestClassifier
 from adult_db_loader import AdultDBLoader
 from children_db_loader import ChildrenDBLoader
-from features import extract_all_db_features
+from features import extract_all_db_features, load_all_raw_db_signals_to_measurement_features, load_features_for_model
 from sklearn.model_selection import cross_val_predict, StratifiedKFold, cross_val_score
 from sklearn.neural_network import MLPClassifier
 from sklearn.ensemble import RandomForestClassifier
@@ -12,35 +12,9 @@ import seaborn as sns
 from logger_config import setup_logger
 import time
 from sklearn.neighbors import KNeighborsClassifier
+import random
 
 _logger = setup_logger(__name__)
-
-def load_features_for_model(loader):
-    adhd_features = []
-    control_features = []
-    extract_all_db_features(loader)
-
-    if type(loader) == ChildrenDBLoader:
-        for p_name in loader.measurements["ADHD"]:
-            adhd_features.append(loader.measurements["ADHD"][p_name].features)
-
-        for p_name in loader.measurements["Control"]:
-            control_features.append(loader.measurements["Control"][p_name].features)
-
-    elif type(loader) == AdultDBLoader:
-        for p_name in loader.measurements["FADHD"]:
-            adhd_features.append(loader.measurements["FADHD"][p_name].features)
-        for p_name in loader.measurements["MADHD"]:
-            adhd_features.append(loader.measurements["MADHD"][p_name].features)
-
-        for p_name in loader.measurements["FC"]:
-            control_features.append(loader.measurements["FC"][p_name].features)
-        for p_name in loader.measurements["MC"]:
-            control_features.append(loader.measurements["MC"][p_name].features)
-    else:
-        raise ValueError("Incorrect loader type!")
-    
-    return adhd_features, control_features
 
 
 if __name__ == "__main__":
@@ -49,9 +23,9 @@ if __name__ == "__main__":
     parser.add_argument("--opt", action="store_true", help="Arg tell if script should optimize parameter for model - may took a lot of time")
     args=parser.parse_args()
 
-    # loader = AdultDBLoader()
-    loader = ChildrenDBLoader()
-    adhd_features, control_features = load_features_for_model(loader)
+    loader = AdultDBLoader()
+    # loader = ChildrenDBLoader()
+    adhd_set, control_set = load_features_for_model(loader=loader, features_type="cwt")
     clf_list = []
     param_list = []
 
@@ -80,15 +54,28 @@ if __name__ == "__main__":
             clf = KNeighborsClassifier(n_neighbors=1)
 
 
+    cross_val_set = adhd_set
+    cross_val_set.extend(control_set)
+    random.shuffle(cross_val_set)
 
-    print(f"ADHD features len: {len(adhd_features)}")
-    print(f"Control features len: {len(control_features)}")
-    cross_val_labels = len(adhd_features) * [0]
-    cross_val_labels.extend(len(control_features) * [1])
+    cross_val_features = []
+    cross_val_labels = []
+    adhd_features = 0
+    control_features = 0
+    ADHD_LABEL = 0
+    CONTROL_LABEL = 1
 
-    cross_val_set = adhd_features
-    cross_val_set.extend(control_features)
-    print(f"Cross val set len: {len(cross_val_set)}")
+    for measurement in cross_val_set:
+        if "ADHD" in measurement.signals[0].meta.group:
+            adhd_features += 1
+            cross_val_labels.append(ADHD_LABEL)
+        else:
+            control_features += 1
+            cross_val_labels.append(CONTROL_LABEL)
+        cross_val_features.append(measurement.features)
+
+    _logger.info(f"ADHD features len: {adhd_features}")
+    _logger.info(f"Control features len: {control_features}")
 
     before = time.time()
     cv = StratifiedKFold(n_splits=10)
@@ -99,7 +86,7 @@ if __name__ == "__main__":
         acc_list = []
 
         for param, clf in zip(param_list, clf_list):
-            scores = cross_val_score(clf, cross_val_set, cross_val_labels, cv=cv)
+            scores = cross_val_score(clf, cross_val_features, cross_val_labels, cv=cv)
             print("Cross-validation scores:", scores)
             
             mean = sum(scores) / len(scores)
@@ -122,7 +109,7 @@ if __name__ == "__main__":
         plt.show()
 
     if args.opt == False:
-        y_pred = cross_val_predict(clf, cross_val_set, cross_val_labels, cv=cv)
+        y_pred = cross_val_predict(clf, cross_val_features, cross_val_labels, cv=cv)
         
         # Compute confusion matrix
         cm = confusion_matrix(cross_val_labels, y_pred)
