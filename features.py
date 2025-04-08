@@ -13,7 +13,8 @@ import os
 _logger = setup_logger(__name__)
 SEP_NUM = 60
 BRAIN_WAVES = ["delta", "theta", "alfa", "beta", "gamma"]
-STATISTICAL_FEATURES = ["średnia", "mediana", "wariancja", "odchylenie_std", "sekwens", "kurtoza", "śr_energia"]
+STATISTICAL_FEATURES = ["średnia", "mediana", "wariancja",
+                        "odchylenie_std", "sekwens", "kurtoza", "śr_energia"]
 SHORTEST_ADULT_DB_SIG = 3840
 
 feature_names = []
@@ -30,14 +31,12 @@ def get_statistical_features(dwt_sig: list) -> list:
     """
     dwt_mean = np.mean(dwt_sig)
     dwt_median = np.median(dwt_sig)
-    dwt_variance = np.var(dwt_sig)  
+    dwt_variance = np.var(dwt_sig)
     dwt_std_dev = np.std(dwt_sig)
     dwt_skew = skew(dwt_sig)
     dwt_kurtosis = kurtosis(dwt_sig)
     mean_energy = np.mean(np.sum(dwt_sig**2))
-    # max_val = max(dwt_sig)
-    # min_val = min(dwt_sig)
-    return [dwt_mean, dwt_median, dwt_variance, dwt_std_dev, dwt_skew, dwt_kurtosis, mean_energy] #, max_val, min_val]
+    return [dwt_mean, dwt_median, dwt_variance, dwt_std_dev, dwt_skew, dwt_kurtosis, mean_energy]
 
 
 def get_all_waves_statistical_features(waves: dict) -> list:
@@ -54,18 +53,19 @@ def get_all_waves_statistical_features(waves: dict) -> list:
         all_waves_features.extend(get_statistical_features(waves[b]))
     return all_waves_features
 
+
 def plot_waves(coefs: list, sig_path: str) -> None:
-    delta = plt.subplot(3,2,1)
+    delta = plt.subplot(3, 2, 1)
     delta.set_title("Fale delta")
-    theta = plt.subplot(3,2,2)
+    theta = plt.subplot(3, 2, 2)
     theta.set_title("Fale theta")
-    alfa = plt.subplot(3,2,3)
+    alfa = plt.subplot(3, 2, 3)
     alfa.set_title("Fale alfa")
-    beta = plt.subplot(3,2,4)
+    beta = plt.subplot(3, 2, 4)
     beta.set_title("Fale beta")
-    gamma = plt.subplot(3,2,5)
+    gamma = plt.subplot(3, 2, 5)
     gamma.set_title("Fale gamma do 64 Hz")
-    gamma_hf = plt.subplot(3,2,6)
+    gamma_hf = plt.subplot(3, 2, 6)
     gamma_hf.set_title("Fale gamma 64-128 Hz")
     plt.subplots_adjust(hspace=0.8, wspace=0.5)
 
@@ -114,15 +114,19 @@ def get_signal_features(signals: list[Signal]) -> list:
         # frequencies, psd_values = signal.welch(sig.data, sig.fs, nperseg=256)
         # sig.features.extend(psd_values)
 
+
 def get_all_db_signal_features(loader):
     iterate_over_whole_db_signals(loader, get_signal_features)
+
 
 def get_measurement_features(measurement: PatientMeasurement):
     for sig in measurement.signals:
         measurement.features.extend(sig.features)
 
+
 def get_add_db_measurement_features(loader):
     iterate_over_whole_db(loader, get_measurement_features)
+
 
 def extract_all_db_features(loader):
     filter_all_db_signals(loader)
@@ -130,20 +134,24 @@ def extract_all_db_features(loader):
     get_all_db_signal_features(loader)
     get_add_db_measurement_features(loader)
 
+
 def get_signals_as_measurement_features(measurement: PatientMeasurement):
     for sig in measurement.signals:
         measurement.features.append(sig.data[:SHORTEST_ADULT_DB_SIG])
 
+
 def get_all_db_signals_as_measurement_features(loader):
     iterate_over_whole_db(loader, get_signals_as_measurement_features)
+
 
 def load_all_raw_db_signals_to_measurement_features(loader):
     filter_all_db_signals(loader)
     standarize_all_db_signals(loader)
     get_all_db_signals_as_measurement_features(loader)
 
+
 def load_features_for_model(loader: AdultDBLoader, features_type: str):
-    adhd_set = [] # list of patient measurements
+    adhd_set = []  # list of patient measurements
     control_set = []
 
     if features_type == "raw":
@@ -165,10 +173,10 @@ def load_features_for_model(loader: AdultDBLoader, features_type: str):
             control_set.append(loader.measurements["MC"][p_name])
     else:
         raise ValueError("Incorrect loader type!")
-    
+
     return adhd_set, control_set
+
 
 if __name__ == "__main__":
     loader = AdultDBLoader()
     adhd, contorl = load_features_for_model(loader=loader, features_type="cwt")
-

@@ -11,6 +11,7 @@ import numpy as np
 
 _logger = setup_logger(__name__)
 
+
 def load_features_for_model(loader):
     adhd_features = []
     control_features = []
@@ -29,7 +30,7 @@ def load_features_for_model(loader):
             control_features.append(loader.measurements["MC"][p_name].features)
     else:
         raise ValueError("Incorrect loader type!")
-    
+
     return adhd_features, control_features
 
 
@@ -43,12 +44,18 @@ if __name__ == "__main__":
 
     all_labels = [0] * len(adhd_features)
     all_labels.extend([1] * len(control_features))
-    X_train, X_test, Y_train, Y_test = train_test_split(all_features, all_labels, random_state=42, test_size=0.3, shuffle=True)
+    X_train, X_test, Y_train, Y_test = train_test_split(
+        all_features,
+        all_labels,
+        random_state=42,
+        test_size=0.3,
+        shuffle=True
+    )
 
     X_train = np.array(X_train)
-    X_test  = np.array(X_test)
-    Y_train  = np.array(Y_train)
-    Y_test  = np.array(Y_test)
+    X_test = np.array(X_test)
+    Y_train = np.array(Y_train)
+    Y_test = np.array(Y_test)
 
     _logger.info(f"Train x len: {len(X_train)}")
     _logger.info(f"Test x len: {len(X_test)}")
@@ -56,18 +63,22 @@ if __name__ == "__main__":
     _logger.info(f"Test y len: {len(Y_test)}")
 
     model = keras.Sequential([
-        layers.Conv2D(64, kernel_size=4, activation='relu', input_shape=(22, 3840, 1)),
+        layers.Conv2D(64, kernel_size=4, activation='relu',
+                      input_shape=(22, 3840, 1)),
         layers.Dropout(0.2),
         layers.Conv2D(32, kernel_size=4, activation='relu'),
         layers.Flatten(),
         layers.Dense(1, activation='sigmoid')
     ])
-    
 
     # Kompilacja
-    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+    model.compile(
+        optimizer='adam',
+        loss='binary_crossentropy',
+        metrics=['accuracy']
+    )
 
-    history = model.fit(X_train, Y_train, epochs=5, batch_size=5)   
+    history = model.fit(X_train, Y_train, epochs=5, batch_size=5)
 
     test_loss, test_acc = model.evaluate(X_test, Y_test)
     print(f"Dokładność modelu: {test_acc:.4f}")

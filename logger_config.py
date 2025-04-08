@@ -7,7 +7,10 @@ LOG_DIR = "logs"
 os.makedirs(LOG_DIR, exist_ok=True)
 
 # Log file name with date-time format
-log_filename = os.path.join(LOG_DIR, f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log")
+log_filename = os.path.join(
+    LOG_DIR, f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"
+)
+
 
 def setup_logger(name):
     """

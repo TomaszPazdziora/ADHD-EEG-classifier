@@ -17,13 +17,16 @@ _logger = setup_logger(__name__)
 
 
 if __name__ == "__main__":
-    parser=argparse.ArgumentParser(description="Model training parser")
-    parser.add_argument("--method", type=str, required=True, help="tree, forest, knn and nn are allowed")
-    parser.add_argument("--opt", action="store_true", help="Arg tell if script should optimize parameter for model - may took a lot of time")
-    args=parser.parse_args()
+    parser = argparse.ArgumentParser(description="Model training parser")
+    parser.add_argument("--method", type=str, required=True,
+                        help="tree, forest, knn and nn are allowed")
+    parser.add_argument("--opt", action="store_true",
+                        help="Arg tell if script should optimize parameter for model - may took a lot of time")
+    args = parser.parse_args()
 
     loader = AdultDBLoader()
-    adhd_set, control_set = load_features_for_model(loader=loader, features_type="cwt")
+    adhd_set, control_set = load_features_for_model(
+        loader=loader, features_type="cwt")
     clf_list = []
     param_list = []
 
@@ -31,15 +34,18 @@ if __name__ == "__main__":
         if args.opt == True:
             param_list = [i for i in range(1, 400, 20)]
             for param in param_list:
-                clf_list.append(MLPClassifier(hidden_layer_sizes=(param,), max_iter=1000, random_state=42))
+                clf_list.append(MLPClassifier(hidden_layer_sizes=(
+                    param,), max_iter=1000, random_state=42))
         elif args.opt == False:
-            clf = MLPClassifier(hidden_layer_sizes=(85,), max_iter=1000, random_state=42)
+            clf = MLPClassifier(hidden_layer_sizes=(
+                85,), max_iter=1000, random_state=42)
 
     elif args.method == "forest":
         if args.opt == True:
             param_list = [i for i in range(1, 400, 20)]
             for param in param_list:
-                clf_list.append(RandomForestClassifier(n_estimators=param, random_state=42))
+                clf_list.append(RandomForestClassifier(
+                    n_estimators=param, random_state=42))
         elif args.opt == False:
             clf = RandomForestClassifier(n_estimators=80, random_state=42)
 
@@ -50,7 +56,6 @@ if __name__ == "__main__":
                 clf_list.append(KNeighborsClassifier(n_neighbors=param))
         elif args.opt == False:
             clf = KNeighborsClassifier(n_neighbors=1)
-
 
     cross_val_set = adhd_set
     cross_val_set.extend(control_set)
@@ -84,9 +89,10 @@ if __name__ == "__main__":
         acc_list = []
 
         for param, clf in zip(param_list, clf_list):
-            scores = cross_val_score(clf, cross_val_features, cross_val_labels, cv=cv)
+            scores = cross_val_score(
+                clf, cross_val_features, cross_val_labels, cv=cv)
             print("Cross-validation scores:", scores)
-            
+
             mean = sum(scores) / len(scores)
             acc_list.append(mean)
             _logger.info(f"Cross-validation mean: {mean}, parameter: {param}")
@@ -96,7 +102,8 @@ if __name__ == "__main__":
                 max_acc = mean
 
         _logger.info(80*'=')
-        _logger.info(f"Max accurancy: {max_acc}, best parameter: {best_parameter}")
+        _logger.info(
+            f"Max accurancy: {max_acc}, best parameter: {best_parameter}")
         _logger.info(80*'=')
 
         plt.plot(param_list, acc_list)
@@ -107,20 +114,22 @@ if __name__ == "__main__":
         plt.show()
 
     if args.opt == False:
-        y_pred = cross_val_predict(clf, cross_val_features, cross_val_labels, cv=cv)
-        
+        y_pred = cross_val_predict(
+            clf, cross_val_features, cross_val_labels, cv=cv)
+
         # Compute confusion matrix
         cm = confusion_matrix(cross_val_labels, y_pred)
 
         # Plot confusion matrix
-        sns.heatmap(cm, annot=True, fmt='d', xticklabels=["ADHD", "control"], yticklabels=["ADHD", "control"], cmap=plt.cm.Blues)
+        sns.heatmap(cm, annot=True, fmt='d', xticklabels=[
+                    "ADHD", "control"], yticklabels=["ADHD", "control"], cmap=plt.cm.Blues)
         plt.ylabel('True label')
         plt.xlabel('Predicted label')
         plt.title("Macierz pomyłek - Tree")
-        
+
     # y_pred = cross_val_predict(clf, cross_val_set, cross_val_labels, cv=cv)
     # print(time.time() - before)
-        
+
     # # Compute confusion matrix
     # cm = confusion_matrix(cross_val_labels, y_pred)
 
