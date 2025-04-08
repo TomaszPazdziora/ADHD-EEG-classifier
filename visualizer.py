@@ -3,6 +3,7 @@ from children_db_loader import ChildrenDBLoader
 from adult_db_loader import AdultDBLoader, _TASK_CHANNELS
 from pre_processing import standarize_all_db_signals, filter_all_db_signals, iterate_over_whole_db_signals
 from features import load_features_for_model, feature_names
+from scipy.signal import spectrogram
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -71,6 +72,17 @@ def plot_fft(sig: Signal, save_to_file=False):
         plt.show()
 
 
+def plot_spect(sig: Signal, save_to_file=False):
+    sig_arr = np.array(sig.data)
+    f, t_spec, Sxx = spectrogram(sig_arr, sig.fs)
+    plt.pcolormesh(t_spec, f, 10 * np.log10(Sxx), shading='gouraud')
+    plt.ylabel('Częstotliwość [Hz]')
+    plt.xlabel('Czas [s]')
+    plt.title('Spektrogram sygnału')
+    plt.colorbar(label='Moc [dB]')
+    plt.show()
+
+
 def save_signals_to_files(singals: list[Signal]):
     # saves all plots as png files in dedicated folders
     cnt = 0
@@ -121,9 +133,11 @@ def save_features_histograms(adhd: list[PatientMeasurement], control: list[Patie
 if __name__ == "__main__":
     # loader = ChildrenDBLoader()
     loader = AdultDBLoader()
-    adhd_features, control_features = load_features_for_model(loader=loader, features_type="cwt")
-    save_features_histograms(adhd_features, control_features)
+    # adhd_features, control_features = load_features_for_model(loader=loader, features_type="cwt")
+    # save_features_histograms(adhd_features, control_features)
     
+    plot_spect(loader.measurements["FADHD"]["patient_0"].signals[0])
+
     # signals = c.load_all_patients_signals_for_single_electrode("ADHD", "F4")
     # filter_signals(signals)
     # standardize_signals(signals)
