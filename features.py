@@ -129,8 +129,11 @@ def get_add_db_measurement_features(loader):
 
 
 def extract_all_db_features(loader):
+    _logger.info("Signals filtering...")
     filter_all_db_signals(loader)
+    _logger.info("Signals standarizing...")
     standarize_all_db_signals(loader)
+    _logger.info("Feature extraction...")
     get_all_db_signal_features(loader)
     get_add_db_measurement_features(loader)
 
