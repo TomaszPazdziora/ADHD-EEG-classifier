@@ -29,3 +29,8 @@ Currently, 'model_training.py' is the main project script that should be run to 
 ```bash
 python3 model_training.py -h # or --help
 ```
+
+The project also includes a script for data visualization. 'visualizer.py' generates plots of the signals from the database. To check the available options, execute:
+```bash
+python3 visualizer.py -h # or --help
+```

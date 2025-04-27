@@ -164,19 +164,3 @@ if __name__ == "__main__":
         plt.xlabel('Predicted label')
         plt.title(f"Macierz pomyłek - {args.method}")
         plt.show()
-
-    # y_pred = cross_val_predict(clf, cross_val_set, cross_val_labels, cv=cv)
-    # print(time.time() - before)
-
-    # # Compute confusion matrix
-    # cm = confusion_matrix(cross_val_labels, y_pred)
-
-    # # Plot confusion matrix
-    # sns.heatmap(cm, annot=True, fmt='d', xticklabels=["ADHD", "control"], yticklabels=["ADHD", "control"], cmap=plt.cm.Blues)
-    # plt.ylabel('True label')
-    # plt.xlabel('Predicted label')
-    # plt.title("Macierz pomyłek - Tree")
-    # plt.show()
-
-    # print(cm)
-    # print('aaa')

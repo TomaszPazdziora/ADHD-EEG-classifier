@@ -55,6 +55,7 @@ def standardize_signals(signals: list[Signal]):
 
 
 def standarize_all_db_signals(data_loader):
+    _logger.info("Signals standarizing...")
     iterate_over_whole_db_signals(data_loader, standardize_signals)
 
 
@@ -69,4 +70,5 @@ def filter_signals(signals: list[Signal]):
 
 
 def filter_all_db_signals(data_loader):
+    _logger.info("Signals filtering...")
     iterate_over_whole_db_signals(data_loader, filter_signals)
