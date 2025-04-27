@@ -36,5 +36,5 @@ python3 visualizer.py -h # or --help
 ```
 
 ## Feature extraction:
-Due to Master Thesis limitation some of the documentation could be written in Polish.
+Due to the requirements of the Master's thesis, some parts of the documentation may be written in Polish.
 ![Data flow](./doc/data_flow.png)
