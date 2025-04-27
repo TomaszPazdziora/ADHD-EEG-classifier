@@ -34,3 +34,7 @@ The project also includes a script for data visualization. 'visualizer.py' gener
 ```bash
 python3 visualizer.py -h # or --help
 ```
+
+## Feature extraction:
+Due to Master Thesis limitation some of the documentation could be written in Polish.
+![Data flow](./doc/data_flow.png)
