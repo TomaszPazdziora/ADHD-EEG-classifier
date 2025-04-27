@@ -129,9 +129,11 @@ class AdultDBLoader:
         return sorted(signals, key=lambda sig: sig.meta.patient_idx)
 
     def load_all_measurements(self):
+        _logger.info("Database loading...")
         self.measurements = {}
         sig_dict = {}
         for group in DB_NAMES:
+            _logger.info(f"{group} loading")
             signals = self.get_all_group_signals(group=group)
             signals = self.sort_signals_by_patient_idx(signals)
             sig_dict[group] = signals

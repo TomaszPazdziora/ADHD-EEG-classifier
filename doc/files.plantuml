@@ -1,0 +1,21 @@
+@startwbs files
++[#Orange] ADHD-EEG-classifier
+++[#Orange] doc
++++[#LightPink] ...
+++[#Orange] adult_db
++++[#SkyBlue] FADHD.mat
++++[#SkyBlue] FC.mat
++++[#SkyBlue] MADHD.mat
++++[#SkyBlue] MC.mat
+++[#LightGreen] sig.py
+++[#LightGreen] adult_db_loader.py
+++[#LightGreen] pre_processing.py
+++[#LightGreen] features.py
+++[#LightGreen] visualizer.py
+++[#Orange] plots
++++[#LightPink] ...
+++[#LightGreen] model_training.py
+++[#LightGreen] logger_config.py
+++[#Orange] logs
++++[#LightPink] ...
+@endwbs

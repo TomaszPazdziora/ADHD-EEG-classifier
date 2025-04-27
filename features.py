@@ -116,6 +116,7 @@ def get_signal_features(signals: list[Signal]) -> list:
 
 
 def get_all_db_signal_features(loader):
+    _logger.info("Feature extraction...")
     iterate_over_whole_db_signals(loader, get_signal_features)
 
 
