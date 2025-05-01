@@ -14,13 +14,16 @@ _logger = setup_logger(__name__)
 SEP_NUM = 60
 BRAIN_WAVES = ["delta", "theta", "alfa", "beta", "gamma"]
 STATISTICAL_FEATURES = ["średnia", "mediana", "wariancja",
-                        "odchylenie_std", "sekwens", "kurtoza", "śr_energia"]
+                        "odchylenie_std.", "sekwens", "kurtoza", "śr._energia"]
 SHORTEST_ADULT_DB_SIG = 3840
 
 feature_names = []
 for wave in BRAIN_WAVES:
     for feature in STATISTICAL_FEATURES:
         feature_names.append(wave + "_" + feature)
+
+feature_title_names = [s.replace('_', ' ') for s in feature_names]
+feature_file_names = [s.replace('.', '') for s in feature_names]
 
 
 def get_statistical_features(dwt_sig: list) -> list:
@@ -35,7 +38,7 @@ def get_statistical_features(dwt_sig: list) -> list:
     dwt_std_dev = np.std(dwt_sig)
     dwt_skew = skew(dwt_sig)
     dwt_kurtosis = kurtosis(dwt_sig)
-    mean_energy = np.mean(np.sum(dwt_sig**2))
+    mean_energy = np.mean(dwt_sig**2)
     return [dwt_mean, dwt_median, dwt_variance, dwt_std_dev, dwt_skew, dwt_kurtosis, mean_energy]
 
 
