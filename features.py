@@ -13,8 +13,9 @@ import os
 _logger = setup_logger(__name__)
 SEP_NUM = 60
 BRAIN_WAVES = ["delta", "theta", "alfa", "beta", "gamma"]
-STATISTICAL_FEATURES = ["średnia", "mediana", "wariancja",
-                        "odchylenie_std.", "sekwens", "kurtoza", "śr._energia"]
+# STATISTICAL_FEATURES = ["średnia", "mediana", "wariancja",
+#                         "odchylenie_std.", "sekwens", "kurtoza", "śr._energia"]
+STATISTICAL_FEATURES = ["mediana", "odchylenie_std.", "śr._energia"]
 SHORTEST_ADULT_DB_SIG = 3840
 
 feature_names = []
@@ -22,6 +23,7 @@ for wave in BRAIN_WAVES:
     for feature in STATISTICAL_FEATURES:
         feature_names.append(wave + "_" + feature)
 
+_logger.info(f"Selected features {feature_names}")
 feature_title_names = [s.replace('_', ' ') for s in feature_names]
 feature_file_names = [s.replace('.', '') for s in feature_names]
 
@@ -32,14 +34,15 @@ def get_statistical_features(dwt_sig: list) -> list:
     Args:
         dwt_sig (list): single dwt signal - for example Alpha wave
     """
-    dwt_mean = np.mean(dwt_sig)
+    # dwt_mean = np.mean(dwt_sig)
     dwt_median = np.median(dwt_sig)
     dwt_variance = np.var(dwt_sig)
     dwt_std_dev = np.std(dwt_sig)
-    dwt_skew = skew(dwt_sig)
-    dwt_kurtosis = kurtosis(dwt_sig)
+    # dwt_skew = skew(dwt_sig)
+    # dwt_kurtosis = kurtosis(dwt_sig)
     mean_energy = np.mean(dwt_sig**2)
-    return [dwt_mean, dwt_median, dwt_variance, dwt_std_dev, dwt_skew, dwt_kurtosis, mean_energy]
+    # return [dwt_mean, dwt_median, dwt_variance, dwt_std_dev, dwt_skew, dwt_kurtosis, mean_energy]
+    return [dwt_median, dwt_std_dev, mean_energy]
 
 
 def get_all_waves_statistical_features(waves: dict) -> list:
@@ -107,8 +110,10 @@ def get_signal_features(signals: list[Signal]) -> list:
 
             # dir_path = f".{os.sep}plots{os.sep}waves{os.sep}{sig.meta.group}{os.sep}task{sig.meta.task}"
             # os.makedirs(dir_path, exist_ok=True)
-            # file_path = dir_path + f"{os.sep}{sig.meta.group}_patient_{sig.meta.patient_idx}_electrode_{sig.meta.electrode}.png"
+            # file_path = dir_path + \
+            #     f"{os.sep}{sig.meta.group}_patient_{sig.meta.patient_idx}_electrode_{sig.meta.electrode}.png"
             # plot_waves(coefs=coefs, sig_path=file_path)
+            # _logger.info(f"saving file to: {file_path}")
 
             for i in range(len(coefs)-1):
                 waves[BRAIN_WAVES[i]] = coefs[i+1]

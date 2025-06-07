@@ -5,9 +5,11 @@ import matplotlib.pyplot as plt
 from logger_config import setup_logger
 from tensorflow import keras
 from keras import layers
+from keras import Sequential
 from sklearn.model_selection import train_test_split
 import copy
 import numpy as np
+from scipy.signal import spectrogram
 
 _logger = setup_logger(__name__)
 
@@ -52,40 +54,80 @@ if __name__ == "__main__":
         shuffle=True
     )
 
-    X_train = np.array(X_train)
-    X_test = np.array(X_test)
+    TASK = 1
+    ELECTRODE = 0
+    X_train = [one_measure[TASK*2+ELECTRODE] for one_measure in X_train]
+    X_test = [one_measure[TASK*2+ELECTRODE] for one_measure in X_test]
+
+    X_spect_train = []
+    X_spect_test = []
+
+    for x in X_train:
+        f, t, Sxx = spectrogram(x, fs=256, nperseg=256, noverlap=128)
+        Sxx = np.log1p(Sxx)
+        S_pad = np.zeros((128, 128))
+        h, w = min(len(Sxx), 128), min(len(Sxx[0]), 128)
+        S_pad[:h, :w] = Sxx[:h, :w]
+        X_padded = S_pad[..., np.newaxis]
+        X_spect_train.append(X_padded)
+
+    for x in X_test:
+        f, t, Sxx = spectrogram(x, fs=256, nperseg=256, noverlap=128)
+        Sxx = np.log1p(Sxx)
+        S_pad = np.zeros((128, 128))
+        h, w = min(len(Sxx), 128), min(len(Sxx[0]), 128)
+        S_pad[:h, :w] = Sxx[:h, :w]
+        X_padded = S_pad[..., np.newaxis]
+        X_spect_test.append(X_padded)
+
+    X_train = np.array(X_spect_train)
+    # len(X_train)
+    # 55
+    # len(X_train[0])
+    # 22
+    X_test = np.array(X_spect_test)
     Y_train = np.array(Y_train)
     Y_test = np.array(Y_test)
+
+    # zamiast 22 wziąć tylko 1 pomiar (1 task i 1 elektroda) zamiast 11 tasków i 2 elektrod
+    # wyliczyć spektrogram
+    # podać do modelu
+    # sprawdzić skuteczność dla każdego obrazu
 
     _logger.info(f"Train x len: {len(X_train)}")
     _logger.info(f"Test x len: {len(X_test)}")
     _logger.info(f"Train y len: {len(Y_train)}")
     _logger.info(f"Test y len: {len(Y_test)}")
 
-    model = keras.Sequential([
-        layers.Conv2D(64, kernel_size=4, activation='relu',
-                      input_shape=(22, 3840, 1)),
-        layers.Dropout(0.2),
-        layers.Conv2D(32, kernel_size=4, activation='relu'),
-        layers.Flatten(),
-        layers.Dense(1, activation='sigmoid')
-    ])
+    for ep in range(10, 20, 2):
+        for b in range(2, 6, 1):
+            for kf in range(2, 6, 1):
+                for ks in range(2, 6, 1):
+                    # for pooling size
+                    model = keras.Sequential([
+                        layers.Conv2D(32, (kf, kf), activation='relu',
+                                      input_shape=(128, 128, 1)),
+                        layers.MaxPooling2D((2, 2)),
+                        layers.Conv2D(64, (ks, ks), activation='relu'),
+                        layers.MaxPooling2D((2, 2)),
+                        layers.Flatten(),
+                        layers.Dense(64, activation='relu'),
+                        layers.Dense(1, activation='sigmoid')
+                    ])
+                    model.compile(
+                        optimizer='adam',
+                        loss='binary_crossentropy',
+                        metrics=['accuracy']
+                    )
+                    history = model.fit(
+                        X_train, Y_train, epochs=ep, batch_size=b)
+                    test_loss, test_acc = model.evaluate(X_test, Y_test)
+                    _logger.info(
+                        f"Dokładność modelu: {test_acc:.4f}, ep: {ep}, batch: {b}, kf {kf}, kl {ks}")
 
-    # Kompilacja
-    model.compile(
-        optimizer='adam',
-        loss='binary_crossentropy',
-        metrics=['accuracy']
-    )
-
-    history = model.fit(X_train, Y_train, epochs=5, batch_size=5)
-
-    test_loss, test_acc = model.evaluate(X_test, Y_test)
-    print(f"Dokładność modelu: {test_acc:.4f}")
-
-    plt.plot(history.history['accuracy'], label='Training Accuracy')
-    plt.xlabel('Epochs')
-    plt.ylabel('Accuracy')
-    plt.legend()
-    plt.title('MLP Model Accuracy vs. Epochs')
-    plt.show()
+    # plt.plot(history.history['accuracy'], label='Training Accuracy')
+    # plt.xlabel('Epochs')
+    # plt.ylabel('Accuracy')
+    # plt.legend()
+    # plt.title('MLP Model Accuracy vs. Epochs')
+    # plt.show()

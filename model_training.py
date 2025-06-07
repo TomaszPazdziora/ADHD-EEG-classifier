@@ -7,7 +7,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import confusion_matrix
 import matplotlib.pyplot as plt
 import argparse
-import seaborn as sns
+# import seaborn as sns
 from logger_config import setup_logger
 import time
 from sklearn.neighbors import KNeighborsClassifier
@@ -18,7 +18,7 @@ ADHD_LABEL = 0
 CONTROL_LABEL = 1
 
 # Training parameters for no optimization option
-K_FOLD_SPLITS = 10
+K_FOLD_SPLITS = 7
 NO_OPT_MPL_LAYERS = 85
 NO_OPT_KNN_NEIGHBOURS = 10
 NO_OPT_FOREST_TREES = 80
@@ -46,6 +46,7 @@ if __name__ == "__main__":
                         help="perform parameter optimization - may took some time")
     args = parser.parse_args()
 
+    _logger.info(f"Chosen method: {args.method}")
     # Load signals and extract features
     loader = AdultDBLoader()
     adhd_set, control_set = load_features_for_model(
@@ -129,7 +130,7 @@ if __name__ == "__main__":
         for param, clf in zip(param_list, clf_list):
             scores = cross_val_score(
                 clf, cross_val_features, cross_val_labels, cv=cv)
-            _logger.info("Cross-validation scores:", scores)
+            _logger.info(f"Cross-validation scores: {scores}")
 
             mean = sum(scores) / len(scores)
             acc_list.append(mean)
@@ -162,5 +163,5 @@ if __name__ == "__main__":
                     "ADHD", "control"], yticklabels=["ADHD", "control"], cmap=plt.cm.Blues)
         plt.ylabel('True label')
         plt.xlabel('Predicted label')
-        plt.title(f"Macierz pomyłek - {args.method}")
+        plt.title(f"Confusion matrix - {args.method}")
         plt.show()

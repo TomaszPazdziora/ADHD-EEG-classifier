@@ -77,8 +77,6 @@ def plot_fft(sig: Signal, save_to_file=False):
         f"{filt_tit}",
         pad=20
     )
-    plt.xlabel('Frequency (Hz)')
-    plt.ylabel('Magnitude')
 
     # Nyquist frequency constraints
     plt.xlim(0, sig.fs/2)
