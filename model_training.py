@@ -20,16 +20,19 @@ ADHD_LABEL = 0
 CONTROL_LABEL = 1
 
 # Training parameters for no optimization option
-K_FOLD_SPLITS = 7
+K_FOLD_SPLITS = 5
 NO_OPT_MPL_LAYERS = 85
 NO_OPT_KNN_NEIGHBOURS = 10
 NO_OPT_FOREST_TREES = 80
 
 # Training parameters for --opt arg
-OPT_PARAM_LIST_MPL = [i for i in range(1, 130, 20)]
-OPT_PARAM_LIST_KNN = [i for i in range(1, 10)]
-OPT_PARAM_LIST_FOREST = [i for i in range(1, 100, 5)]
+OPT_PARAM_LIST_MPL = [i for i in range(1, 150, 5)]
+OPT_PARAM_LIST_KNN = [i for i in range(1, 45)]
+OPT_PARAM_LIST_FOREST = [i for i in range(1, 200, 5)]
 
+arg_names = {"knn": "knn", "forest": "las losowy", "mpl": "mpl"}
+args_param = {"knn": "ilość sąsiadów",
+              "forest": "ilość drzew", "mpl": "liczba warstw ukrytych"}
 _logger = setup_logger(__name__)
 
 
@@ -92,8 +95,10 @@ if __name__ == "__main__":
             _logger.info(
                 f"Training knn model for given parameter: {NO_OPT_KNN_NEIGHBOURS}")
 
-    acc_task_list = []
+    acc_task_list = []  # lista najlepszych dokładności dla tasków
     best_param_list = []
+    # lista wszystkich dokładności dla modelu - wykorzystywane do zrobienia zbiorowego wykresu
+    acc_plot_task_list = []
 
     if os.path.exists("acc.csv"):
         pass
@@ -117,7 +122,12 @@ if __name__ == "__main__":
         # Format cross validation set, shuffle placement
         cross_val_set = adhd_set
         cross_val_set.extend(control_set)
+        random.seed(42)
         random.shuffle(cross_val_set)
+
+        for x in cross_val_set:
+            _logger.info(x.signals[0])
+            _logger.info(x.signals[1])
 
         cross_val_features = []
         cross_val_labels = []
@@ -165,12 +175,21 @@ if __name__ == "__main__":
                 f"Max accurancy: {max_acc}, best parameter: {best_parameter}")
             _logger.info(80*'=')
 
-            # plt.plot(param_list, acc_list)
-            # plt.title(args.method)
-            # plt.xlabel('Wartość parametru')
-            # plt.ylabel('Skuteczność')
-            # plt.grid()
-            # plt.show()
+            path = f"plots{os.sep}model_verification{os.sep}{args.method}{os.sep}"
+            if not os.path.exists(path):
+                os.makedirs(path)
+
+            task_plot_path = path + f"task_{i+1}"
+            plt.plot(param_list, acc_list)
+            plt.title(
+                f"{arg_names[args.method]} - dokładność w funkcji parametru, zadanie: {i+1}")
+            plt.xlabel(f'Wartość parametru ({args_param[args.method]})')
+            plt.ylabel('Dokładność [-]')
+            plt.grid()
+            plt.savefig(task_plot_path)
+            plt.clf()
+            acc_plot_task_list.append(acc_list)
+
         best_param_list.append(best_parameter)
         best_acc = round(max_acc*100, 4)
         acc_task_list.append(best_acc)
@@ -199,3 +218,20 @@ if __name__ == "__main__":
     _logger.info(f"best parameters len: {len(best_param_list)}")
     _logger.info(f"task acc: {acc_task_list}")
     _logger.info(f"task acc len: {len(acc_task_list)}")
+
+    group_file = path + f"group"
+    colors = plt.get_cmap('tab20').colors  # 20 wyraźnych kolorów
+
+    for i, task in enumerate(acc_plot_task_list):
+        plt.plot(param_list, task,
+                 label=f'Zadanie {i+1}', color=colors[i % len(colors)])
+
+    plt.title(
+        f"{arg_names[args.method]} - Dokładność w funkcji parametru ({args_param[args.method]})")
+    plt.xlabel(f'Wartość parametru ({args_param[args.method]})')
+    plt.ylabel('Dokładność [-]')
+    plt.legend(loc='center left', bbox_to_anchor=(1, 0.5), ncol=1)
+    plt.grid()
+    plt.tight_layout()
+    plt.savefig(path + f"group", bbox_inches='tight')
+    plt.clf()

@@ -189,17 +189,17 @@ def save_features_histograms(adhd: list[PatientMeasurement], control: list[Patie
             adhd_hist = np.array(adhd_hist)
             control_hist = np.array(control_hist)
 
-            low, high = np.percentile(
-                control_hist, 5), np.percentile(control_hist, 95)
-            control_hist = control_hist[(control_hist >= low)
-                                        & (control_hist <= high)]
+            # low, high = np.percentile(
+            #     control_hist, 5), np.percentile(control_hist, 95)
+            # control_hist = control_hist[(control_hist >= low)
+            #                             & (control_hist <= high)]
 
-            low, high = np.percentile(
-                adhd_hist, 5), np.percentile(adhd_hist, 95)
-            adhd_hist = adhd_hist[(adhd_hist >= low)
-                                  & (adhd_hist <= high)]
+            # low, high = np.percentile(
+            #     adhd_hist, 5), np.percentile(adhd_hist, 95)
+            # adhd_hist = adhd_hist[(adhd_hist >= low)
+            #                       & (adhd_hist <= high)]
 
-            # 79 * 11 tasków * 2 elektrody
+            # X osób * 11 tasków * 2 elektrody
             task_idx = int(task_electrode_idx/2)
             electrode_idx = task_electrode_idx % 2
             electrode = _TASK_CHANNELS[task_idx][electrode_idx]
@@ -239,7 +239,6 @@ def save_features_histograms(adhd: list[PatientMeasurement], control: list[Patie
 
             counts, bins, _ = plt.hist(adhd_hist, histtype='stepfilled', alpha=0.3, density=False,
                                        bins=25, edgecolor='black', label='adhd')
-            bin_width = bins[1] - bins[0]
 
             pdf_adhd = norm.pdf(x, mu_adhd, std_adhd)
             pdf_adhd = pdf_adhd / max(pdf_adhd)
@@ -248,7 +247,7 @@ def save_features_histograms(adhd: list[PatientMeasurement], control: list[Patie
                      'b', label='Gauss gr. ADHD')
             counts, bins, _ = plt.hist(control_hist, histtype='stepfilled', alpha=0.3, density=False,
                                        bins=25, edgecolor='black', label='control')
-            bin_width = bins[1] - bins[0]
+
             pdf_cont = norm.pdf(x, mu_cont, std_cont)
             pdf_cont = pdf_cont / max(pdf_cont)
             pdf_cont = pdf_cont * max(counts)

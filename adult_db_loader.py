@@ -31,6 +31,11 @@ from sig import Signal, SignalMeta, PatientMeasurement
 # NUM_OF_PATIENTS - depends
 # NUM_OF_CHANNELS - 2
 
+# FADHD 11 patients - 1 corrupted
+# FC 13 patients
+# MADHD 27 patients
+# MC 29 patients
+
 _logger = setup_logger(__name__)
 NUM_OF_TASKS = 11
 TASK_DURATION = [30, 20, 20, 45, 15, 30, 30, 20, 20, 45, 45]  # in seconds
@@ -115,7 +120,17 @@ class AdultDBLoader:
         tasks = self._load_all_tasks(db)
         for task_idx, task in enumerate(tasks):
             for patient_idx, patient in enumerate(task.patients):
-                if group == "FADHD" and patient_idx == 6:
+                # skip all patients with disturbed signals
+                # visualizations shows patients with (patient_idx + 1) indexing
+                # to consider: MADHD2, MADHD3, FC12, MC25
+                # (group == "MC" and patient_idx == 24) or \
+                # (group == "FC" and patient_idx == 11) or \
+                # (group == "MADHD" and patient_idx == 1) or \
+                # (group == "MADHD" and patient_idx == 2) or \
+                if (group == "FADHD" and patient_idx == 6) or \
+                    (group == "MADHD" and patient_idx == 18) or \
+                    (group == "MADHD" and patient_idx == 24) or \
+                        (group == "MC" and patient_idx == 17):
                     continue
                 for electrode_idx, electrode in enumerate(patient.channels):
                     meta = SignalMeta(
