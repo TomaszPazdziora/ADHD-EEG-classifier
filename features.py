@@ -15,7 +15,7 @@ SEP_NUM = 60
 BRAIN_WAVES = ["delta", "theta", "alfa", "beta", "gamma"]
 STATISTICAL_FEATURES = ["średnia", "mediana", "wariancja",
                         "odchylenie_std.", "sekwens", "kurtoza", "śr._energia"]
-# STATISTICAL_FEATURES = ["mediana", "odchylenie_std.", "śr._energia"]
+# STATISTICAL_FEATURES = ["wariancja", "odchylenie_std.", "śr._energia"]
 SHORTEST_ADULT_DB_SIG = 3840
 USED_ELECTRODES_NUM = 2
 
@@ -43,7 +43,7 @@ def get_statistical_features(dwt_sig: list) -> list:
     dwt_kurtosis = kurtosis(dwt_sig)
     mean_energy = np.mean(dwt_sig**2)
     return [dwt_mean, dwt_median, dwt_variance, dwt_std_dev, dwt_skew, dwt_kurtosis, mean_energy]
-    # return [dwt_median, dwt_std_dev, mean_energy]
+    # return [dwt_variance, dwt_std_dev, mean_energy]
 
 
 def get_all_waves_statistical_features(waves: dict) -> list:
