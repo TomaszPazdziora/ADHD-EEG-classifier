@@ -27,6 +27,10 @@ from sig import Signal, SignalMeta, PatientMeasurement
 # cell 10: Eyes closed, channels: F3, F4, duration: 45s
 # cell 11: Eyes closed, channels: Fz, F4, duration: 45s
 
+# closed 2,8,10,11
+# open 1,3,7,9
+# cogn, assesment 4,5,6
+
 # NUM_OF_TASKS - 11
 # NUM_OF_PATIENTS - depends
 # NUM_OF_CHANNELS - 2
