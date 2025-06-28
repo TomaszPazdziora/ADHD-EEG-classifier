@@ -1,0 +1,23 @@
+@startwbs plots
++[#Orange] plots
+++[#Orange] DB_adult
++++[#LightSkyBlue] filtered
+++++[#Olive] fft
++++++[#YellowGreen] task_1
++++++[#YellowGreen] ...
++++++[#YellowGreen] task_11
+++++[#Olive] spect
+++++[#Olive] time
++++[#LightSkyBlue] not_filtered
+++++[#Olive] fft
+++++[#Olive] spect
+++++[#Olive] time
+++[#Olive] features_histograms
++++[#YellowGreen] task_1
+++++[#Gold] alfa_śr_energia_Cz.png
+++++[#Gold] ...
+++++[#Gold] typ_fali_cecha_elektroda.png
++++[#YellowGreen] task_2
++++[#YellowGreen] ...
++++[#YellowGreen] task_11
+@endwbs

@@ -27,9 +27,18 @@ from sig import Signal, SignalMeta, PatientMeasurement
 # cell 10: Eyes closed, channels: F3, F4, duration: 45s
 # cell 11: Eyes closed, channels: Fz, F4, duration: 45s
 
+# closed 2,8,10,11
+# open 1,3,7,9
+# cogn, assesment 4,5,6
+
 # NUM_OF_TASKS - 11
 # NUM_OF_PATIENTS - depends
 # NUM_OF_CHANNELS - 2
+
+# FADHD 11 patients - 1 corrupted
+# FC 13 patients
+# MADHD 27 patients
+# MC 29 patients
 
 _logger = setup_logger(__name__)
 NUM_OF_TASKS = 11
@@ -75,7 +84,12 @@ class Task:
 class AdultDBLoader:
     """Loads data from given file. Example input: db_name='FC'"""
 
-    def __init__(self):
+    def __init__(self, active_tasks_list=[i for i in range(0, NUM_OF_TASKS)]):
+        for a in active_tasks_list:
+            if a < 0 or a > 10 or len(active_tasks_list) > 11:
+                raise ValueError("Task ids should be in [0-10] range!")
+        self.active_tasks_list = active_tasks_list
+        self.active_tasks_len = len(self.active_tasks_list)
         self.load_all_measurements()
 
     def _load_single_electorode_data(self, task_idx: int, patient_idx: int, channel_idx: int, raw_data: list) -> list:
@@ -99,7 +113,9 @@ class AdultDBLoader:
     def _load_all_tasks(self, raw_data: list) -> list:
         tasks = [Task(self._load_all_patients(patient, raw_data))
                  for patient in range(len(raw_data))]
-        return tasks
+        # use only active tasks
+        act_tasks = [tasks[a] for a in self.active_tasks_list]
+        return act_tasks
 
     def get_all_group_signals(self, group):
         signals = []
@@ -108,15 +124,26 @@ class AdultDBLoader:
         tasks = self._load_all_tasks(db)
         for task_idx, task in enumerate(tasks):
             for patient_idx, patient in enumerate(task.patients):
-                if group == "FADHD" and patient_idx == 6:
+                # skip all patients with disturbed signals
+                # visualizations shows patients with (patient_idx + 1) indexing
+                # to consider: MADHD2, MADHD3, FC12, MC25
+                # (group == "MC" and patient_idx == 24) or \
+                # (group == "FC" and patient_idx == 11) or \
+                # (group == "MADHD" and patient_idx == 1) or \
+                # (group == "MADHD" and patient_idx == 2) or \
+                if (group == "FADHD" and patient_idx == 6) or \
+                    (group == "MADHD" and patient_idx == 18) or \
+                    (group == "MADHD" and patient_idx == 24) or \
+                        (group == "MC" and patient_idx == 17):
                     continue
                 for electrode_idx, electrode in enumerate(patient.channels):
                     meta = SignalMeta(
                         db_name="adult",
                         group=group,
                         patient_idx=patient_idx,
-                        electrode=get_channel_name(task_idx, electrode_idx),
-                        task=task_idx
+                        electrode=get_channel_name(
+                            self.active_tasks_list[task_idx], electrode_idx),
+                        task=self.active_tasks_list[task_idx]
                     )
                     signals.append(Signal(
                         sig=electrode.data,
@@ -130,23 +157,27 @@ class AdultDBLoader:
 
     def load_all_measurements(self):
         _logger.info("Database loading...")
+        _logger.info(
+            f"Loading signals for given tasks: {self.active_tasks_list}")
         self.measurements = {}
         sig_dict = {}
         for group in DB_NAMES:
+            _logger.info("=" * 80)
             _logger.info(f"{group} loading")
             signals = self.get_all_group_signals(group=group)
             signals = self.sort_signals_by_patient_idx(signals)
+            _logger.info(f"Number of signals in group {group}: {len(signals)}")
             sig_dict[group] = signals
 
         for gr_name, sig_list in sig_dict.items():
-            if len(sig_list) % NUM_OF_TASKS != 0:
-                raise ValueError
-            for i in range(0, len(sig_list), NUM_OF_TASKS*2):
+            if len(sig_list) % self.active_tasks_len != 0:
+                raise ValueError("Data loader errror! Incorrect sig list len.")
+            for i in range(0, len(sig_list), self.active_tasks_len*2):
                 pat_str = f"patient_{sig_list[i].meta.patient_idx}"
                 if gr_name not in self.measurements:
                     self.measurements[gr_name] = {}
                 self.measurements[gr_name][pat_str] = PatientMeasurement(
-                    sig_list[i:i+NUM_OF_TASKS*2])
+                    sig_list[i:i+self.active_tasks_len*2])
 
 
 if __name__ == "__main__":

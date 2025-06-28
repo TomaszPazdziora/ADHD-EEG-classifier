@@ -34,5 +34,5 @@ fala_gamma --> cechy_statystyczne
 "cechy_theta" -[hidden]right-> "cechy_delta"
 "cechy_delta" -[hidden]right-> "cechy_gamma"
 
-cechy_statystyczne --> cechy_theta: średnia\nmediana\nwariancja\n odchylenie_std\n kurtoza \n wsp. skośności
+cechy_statystyczne --> cechy_theta: średnia\nmediana\nwariancja\n odchylenie_std\n kurtoza \n wsp. skośności\n średnia energia
 @enduml

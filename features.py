@@ -15,13 +15,16 @@ SEP_NUM = 60
 BRAIN_WAVES = ["delta", "theta", "alfa", "beta", "gamma"]
 STATISTICAL_FEATURES = ["średnia", "mediana", "wariancja",
                         "odchylenie_std.", "sekwens", "kurtoza", "śr._energia"]
+# STATISTICAL_FEATURES = ["wariancja", "odchylenie_std.", "śr._energia"]
 SHORTEST_ADULT_DB_SIG = 3840
+USED_ELECTRODES_NUM = 2
 
 feature_names = []
 for wave in BRAIN_WAVES:
     for feature in STATISTICAL_FEATURES:
         feature_names.append(wave + "_" + feature)
 
+_logger.info(f"Selected features {feature_names}")
 feature_title_names = [s.replace('_', ' ') for s in feature_names]
 feature_file_names = [s.replace('.', '') for s in feature_names]
 
@@ -40,6 +43,7 @@ def get_statistical_features(dwt_sig: list) -> list:
     dwt_kurtosis = kurtosis(dwt_sig)
     mean_energy = np.mean(dwt_sig**2)
     return [dwt_mean, dwt_median, dwt_variance, dwt_std_dev, dwt_skew, dwt_kurtosis, mean_energy]
+    # return [dwt_variance, dwt_std_dev, mean_energy]
 
 
 def get_all_waves_statistical_features(waves: dict) -> list:
@@ -107,8 +111,10 @@ def get_signal_features(signals: list[Signal]) -> list:
 
             # dir_path = f".{os.sep}plots{os.sep}waves{os.sep}{sig.meta.group}{os.sep}task{sig.meta.task}"
             # os.makedirs(dir_path, exist_ok=True)
-            # file_path = dir_path + f"{os.sep}{sig.meta.group}_patient_{sig.meta.patient_idx}_electrode_{sig.meta.electrode}.png"
+            # file_path = dir_path + \
+            #     f"{os.sep}{sig.meta.group}_patient_{sig.meta.patient_idx}_electrode_{sig.meta.electrode}.png"
             # plot_waves(coefs=coefs, sig_path=file_path)
+            # _logger.info(f"saving file to: {file_path}")
 
             for i in range(len(coefs)-1):
                 waves[BRAIN_WAVES[i]] = coefs[i+1]
@@ -170,11 +176,32 @@ def load_features_for_model(loader: AdultDBLoader, features_type: str):
             adhd_set.append(loader.measurements["FADHD"][p_name])
         for p_name in loader.measurements["MADHD"]:
             adhd_set.append(loader.measurements["MADHD"][p_name])
-
         for p_name in loader.measurements["FC"]:
             control_set.append(loader.measurements["FC"][p_name])
         for p_name in loader.measurements["MC"]:
             control_set.append(loader.measurements["MC"][p_name])
+
+        fadhd_features_len = len(
+            loader.measurements["FADHD"]["patient_0"].features)
+        fc_features_len = len(
+            loader.measurements["FC"]["patient_0"].features)
+        madhd_features_len = len(
+            loader.measurements["MADHD"]["patient_0"].features)
+        mc_features_len = len(
+            loader.measurements["MC"]["patient_0"].features)
+
+        # check if all features vectors len are equal
+        assert fadhd_features_len == fc_features_len == madhd_features_len == mc_features_len
+        # active_tasks_len * 5 brain waves * X st features * num of electrodes should be equal to the length of computed features
+        assert loader.active_tasks_len * \
+            len(BRAIN_WAVES) * len(STATISTICAL_FEATURES) * \
+            USED_ELECTRODES_NUM == fadhd_features_len
+        _logger.info("=" * 80)
+        _logger.info(
+            f"Num of features: {len(STATISTICAL_FEATURES)}, Num of brain waves: {len(BRAIN_WAVES)}, Num of electrodes {USED_ELECTRODES_NUM}")
+        _logger.info(f"Single patient features len: {fadhd_features_len}")
+        _logger.info("=" * 80)
+
     else:
         raise ValueError("Incorrect loader type!")
 

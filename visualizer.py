@@ -9,6 +9,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 from logger_config import setup_logger
+from scipy.stats import norm
+import csv
+
 _logger = setup_logger(__name__)
 
 MIN_HIST_BAR_NUM = 25
@@ -77,8 +80,6 @@ def plot_fft(sig: Signal, save_to_file=False):
         f"{filt_tit}",
         pad=20
     )
-    plt.xlabel('Frequency (Hz)')
-    plt.ylabel('Magnitude')
 
     # Nyquist frequency constraints
     plt.xlim(0, sig.fs/2)
@@ -166,6 +167,13 @@ def save_all_db_spect_to_file(data_loader):
 
 
 def save_features_histograms(adhd: list[PatientMeasurement], control: list[PatientMeasurement]):
+    with open(f'features.csv', mode='w') as feature_csv_file:
+        feature_writer = csv.writer(
+            feature_csv_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        feature_writer.writerow(
+            ["Cecha", "Średnia gr. ADHD", "Średnia gr. kontrolna", "Odch. std. gr. ADHD", "Odch. std. gr. kontrolna",
+             "Różnica między średnimi", "Różnica między Odch. std."])
+
     for task_electrode_idx in range(0, 22):
         for i in range(len(feature_file_names)):
             adhd_hist = []
@@ -178,15 +186,24 @@ def save_features_histograms(adhd: list[PatientMeasurement], control: list[Patie
                 control_hist.append(
                     meas.features[task_electrode_idx * len(feature_file_names) + i])
 
-            _logger.info(f"number of hist values (adhd): {len(adhd_hist)}")
-            _logger.info(
-                f"number of hist values (control): {len(control_hist)}")
+            adhd_hist = np.array(adhd_hist)
+            control_hist = np.array(control_hist)
 
-            # 79 * 22 taski
+            # low, high = np.percentile(
+            #     control_hist, 5), np.percentile(control_hist, 95)
+            # control_hist = control_hist[(control_hist >= low)
+            #                             & (control_hist <= high)]
+
+            # low, high = np.percentile(
+            #     adhd_hist, 5), np.percentile(adhd_hist, 95)
+            # adhd_hist = adhd_hist[(adhd_hist >= low)
+            #                       & (adhd_hist <= high)]
+
+            # X osób * 11 tasków * 2 elektrody
             task_idx = int(task_electrode_idx/2)
             electrode_idx = task_electrode_idx % 2
             electrode = _TASK_CHANNELS[task_idx][electrode_idx]
-            save_dir = f"plots{os.sep}features_histograms{os.sep}task_{task_idx+1}"
+            save_dir = f"plots{os.sep}features_histograms_std{os.sep}task_{task_idx+1}"
 
             # Normalization of the bar width in the histogram
             max_n = max(control_hist)
@@ -196,20 +213,48 @@ def save_features_histograms(adhd: list[PatientMeasurement], control: list[Patie
 
             dist_n = max_n - min_n
             dist_ad = max_ad - min_ad
-            if dist_n > dist_ad:
-                bins_ad = MIN_HIST_BAR_NUM
-                bins_n = round(MIN_HIST_BAR_NUM * (dist_n/dist_ad))
-            else:
-                bins_n = MIN_HIST_BAR_NUM
-                bins_ad = round(MIN_HIST_BAR_NUM * (dist_ad/dist_n))
+            # if dist_n > dist_ad:
+            #     bins_ad = MIN_HIST_BAR_NUM
+            #     bins_n = round(MIN_HIST_BAR_NUM * (dist_n/dist_ad))
+            # else:
+            #     bins_n = MIN_HIST_BAR_NUM
+            #     bins_ad = round(MIN_HIST_BAR_NUM * (dist_ad/dist_n))
 
+            mu_adhd, std_adhd = norm.fit(adhd_hist)
+            mu_cont, std_cont = norm.fit(control_hist)
+            x = np.linspace(min(min_n, min_ad),
+                            max(max_n, max_ad), 100)
+
+            shift = abs((mu_adhd - mu_cont) / max(dist_n, dist_ad))
+            shift_std = abs(std_adhd - std_cont)
             wave, cecha = feature_title_names[i].split(" ", 1)
-            plt.hist(adhd_hist, histtype='stepfilled', alpha=0.3,
-                     bins=bins_ad, edgecolor='black', label='adhd')
-            plt.hist(control_hist, histtype='stepfilled', alpha=0.3,
-                     bins=bins_n, edgecolor='black', label='control')
+            feature = f"fala: {wave}, cecha: {cecha}, zadanie: {str(task_idx+1)}, elektroda: {electrode}"
+
+            with open(f'features.csv', mode='a') as feature_csv_file:
+                feature_writer = csv.writer(
+                    feature_csv_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+                feature_writer.writerow(
+                    [feature, round(mu_adhd, 4), round(mu_cont, 4), round(std_adhd, 4),
+                     round(std_cont, 4), round(shift, 4), round(shift_std, 4)])
+
+            counts, bins, _ = plt.hist(adhd_hist, histtype='stepfilled', alpha=0.3, density=False,
+                                       bins=25, edgecolor='black', label='adhd')
+
+            pdf_adhd = norm.pdf(x, mu_adhd, std_adhd)
+            pdf_adhd = pdf_adhd / max(pdf_adhd)
+            pdf_adhd = pdf_adhd * max(counts)
+            plt.plot(x, pdf_adhd,
+                     'b', label='Gauss gr. ADHD')
+            counts, bins, _ = plt.hist(control_hist, histtype='stepfilled', alpha=0.3, density=False,
+                                       bins=25, edgecolor='black', label='control')
+
+            pdf_cont = norm.pdf(x, mu_cont, std_cont)
+            pdf_cont = pdf_cont / max(pdf_cont)
+            pdf_cont = pdf_cont * max(counts)
+            plt.plot(x, pdf_cont,
+                     'r', label='Gauss gr. kontrolna')
             plt.title(
-                f'Histogram - fala: {wave}, cecha: {cecha}, zadanie: {str(task_idx+1)}, elektroda: {electrode}')
+                f'Histogram - {feature}')
             plt.xlabel('Wartość cechy')
             plt.ylabel('Liczba wystąpień')
 
